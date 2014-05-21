@@ -135,25 +135,21 @@ class PassPhrase
         inject_numbers(options[:number_density], options[:number_injector])
         @words.join(options[:separator])
     end
-
     def random_word_count(minimum_word_count, maximum_word_count)
         range = maximum_word_count - minimum_word_count + 1
         random = $ENTROPY.random(range)
         minimum_word_count + random.to_i
     end
-
     def modify_case(case_modifier)
         @words.map! do |word|
             case_modifier.modify_case(word)
         end
     end
-
     def modify_letters_in_words(letter_map)
         @words.map! do |word|
             modify_letters(word, letter_map)
         end
     end
-
     def modify_letters(word, letter_map)
         letters = word.split('')
         letters.map! do |letter|
@@ -161,11 +157,9 @@ class PassPhrase
         end
         letters.join('')
     end
-
     def inject_numbers(number_density, numbers_injector)
         numbers_injector.inject_numbers(@words, number_density)
     end
-
     def modify_one_letter(letter, letter_map)
         alternate = letter_map[ letter.downcase ]
         choin_toss = $ENTROPY.random(2) == 1
@@ -175,7 +169,6 @@ class PassPhrase
             letter
         end
     end
-
     def random_words(word_list, number_of_words)
         @words = []
         number_of_words.times do
@@ -305,13 +298,13 @@ class NumbersInWordsInjectorBase < BaseNumberInjector
         words
     end
     def compute_random_offsets(max_offset, number_of_offsets_to_return)
-        loops = 0
-        loop_limit = 10
-        random_offsets = Set.new
-        while random_offsets.size < number_of_offsets_to_return && loops <= loop_limit
-            random_offset = $ENTROPY.random(max_offset).to_i
-            random_offsets.add(random_offset)
-        loops += 1
+        random_offsets = []
+        offsets = (0...max_offset).map{|x|x}
+        for i in 0...number_of_offsets_to_return
+            random = $ENTROPY.random(offsets.size)
+            offset = offsets.delete_at(random)
+            random_offsets << offset
+            break if offsets.empty?
         end
         random_offsets
     end

@@ -260,8 +260,9 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
     end
     def test_high_number_density_gives_many_numbers_injected
         injector = NumbersBetweenWordsInjector.new
-        expected = ['20','40','a','60','b','80','c','d','e']
-        $ENTROPY = EntropyArrayMock.new([0.9, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+        expected = ['a','b','c','d','90','90','90','90','e']
+        $ENTROPY = EntropyMock.new
+        $RANDOM = 0.9
         number_density = 0.8
 
         actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
@@ -346,12 +347,9 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
     def test_high_number_density_gives_many_numbers_injected
         injector = NumbersAfterWordsInjector.new
         number_density = 1.0
-        random_number_density_scale = 1.0
-        random_number_locations = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0, 0, 0]
-        random_number_values = [0.13, 0.14, 0.15, 0.16, 0.17]
-        random_numbers = [random_number_density_scale, random_number_locations, random_number_values].flatten
-        $ENTROPY = EntropyArrayMock.new(random_numbers)
-        expected = ['a13','b14','c15','d16','e17']
+        $ENTROPY = EntropyMock.new
+        $RANDOM = 0.9
+        expected = ['a90','b90','c90','d90','e90']
 
         actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
 
@@ -373,7 +371,7 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
         number_density = 1.0
         $ENTROPY = EntropyMock.new
         $RANDOM = 0.9
-        expected = ['a','b','c','d','e90']
+        expected = ['a90','b90','c90','d90','e90']
 
         actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
 
@@ -441,11 +439,11 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
     def test_high_number_density_gives_many_numbers_injected
         injector = NumbersInsideWordsInjector.new
         number_density = 1.0
-        random_numbers = [0.9, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.21, 0.31, 0.41, 0.51, 0.61, 0.71, 0.81, 0.91, 0.22, 0.32, 0.42]
-        $ENTROPY = EntropyArrayMock.new(random_numbers)
+        $ENTROPY = EntropyMock.new
+        $RANDOM = 0.9
 
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
-        expected = ['aaaaaaaaa', 'bbbbb51bbbb', 'ccccccc71cc', 'd91dddddddd', 'eee32eeeeee']
+        expected = ['aaaaaaaa90a', 'bbbbbbbb90b', 'cccccccc90c', 'dddddddd90d', 'eeeeeeee90e']
 
         actual = injector.inject_numbers(input, number_density)
 
@@ -471,7 +469,7 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
         $RANDOM = 0.9
 
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
-        expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeee90e']
+        expected = ['aaaaaaaa90a','bbbbbbbb90b','cccccccc90c','dddddddd90d','eeeeeeee90e']
 
         actual = injector.inject_numbers(input, number_density)
 
@@ -602,7 +600,7 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         options[:number_injector] = NumbersAfterWordsInjector.new
         word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']
         $RANDOM = 0.5
-        expected = 'ccccccccc ccccccccc ccccccccc50 ccccccccc ccccccccc'
+        expected = 'ccccccccc ccccccccc ccccccccc50 ccccccccc50 ccccccccc'
 
         actual = passphrase.create_pass_phrase(options, word_list)
 
@@ -614,7 +612,7 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         options[:number_injector] = NumbersInsideWordsInjector.new
         word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']
         $RANDOM = 0.5
-        expected = 'ccccccccc ccccccccc cccc50ccccc ccccccccc ccccccccc'
+        expected = 'ccccccccc ccccccccc cccc50ccccc cccc50ccccc ccccccccc'
 
         actual = passphrase.create_pass_phrase(options, word_list)
 
