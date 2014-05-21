@@ -4,14 +4,16 @@ require 'test/unit'
 require 'test/unit/assertions.rb'
 require 'xkcdpass.rb'
 
-class EntropyMock
+$RANDOM = 0
+
+class EntropyMockReturnsConstantValue
+    def initialize(mock_random_value)
+        @mock_random_value = mock_random_value
+    end
     def random(max)
-        return (max * $RANDOM).to_i
+        return (max * @mock_random_value).to_i
     end
 end
-
-$ENTROPY = EntropyMock.new
-$RANDOM = 0
 
 class BuildCaseModifierTests < Test::Unit::TestCase
     def test_build_uppercase_modifier
@@ -51,7 +53,7 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = UpCaseModifier.new
         expected = 'THIS'
 
-        actual = modifier.modify_case('ThiS')
+        actual = modifier.modify_case('ThiS', nil)
 
         assert_equal expected, actual
     end
@@ -59,7 +61,7 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = DownCaseModifier.new
         expected = 'this'
 
-        actual = modifier.modify_case('ThiS')
+        actual = modifier.modify_case('ThiS', nil)
 
         assert_equal expected, actual
     end
@@ -67,46 +69,57 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = CapitalizeCaseModifier.new
         expected = 'This'
 
-        actual = modifier.modify_case('ThiS')
+        actual = modifier.modify_case('ThiS', nil)
 
         assert_equal expected, actual
     end
     def test_radom_case_modifier_can_make_uppercase
         modifier = RandomCaseModifier.new
         expected = 'THIS'
-        $RANDOM = 0.2
 
-        actual = modifier.modify_case('ThiS')
+        actual = modifier.modify_case('ThiS', EntropyMockReturnsConstantValue.new(0.2))
 
         assert_equal expected, actual
     end
     def test_radom_case_modifier_can_make_lowercase
         modifier = RandomCaseModifier.new
         expected = 'this'
-        $RANDOM = 0.4
 
-        actual = modifier.modify_case('ThiS')
+        actual = modifier.modify_case('ThiS', EntropyMockReturnsConstantValue.new(0.4))
 
         assert_equal expected, actual
     end
     def test_radom_case_modifier_can_make_capitalize
         modifier = RandomCaseModifier.new
         expected = 'This'
-        $RANDOM = 0.8
 
-        actual = modifier.modify_case('ThiS')
+        actual = modifier.modify_case('ThiS', EntropyMockReturnsConstantValue.new(0.8))
 
         assert_equal expected, actual
     end
-    def test_alternating_case_modifier_alternates_between_lowercase_and_uppercase
-        modifier = AlternateCaseModifier.new
+    def test_alternating_case_modifier_alternates_between_lowercase_and_uppercase_start_with_lowercase
+        modifier = AlternateCaseModifier.new(false)
         first_expected = 'this'
         second_expected = 'THIS'
         third_expected = 'this'
 
-        first_actual = modifier.modify_case('ThiS')
-        second_actual = modifier.modify_case('ThiS')
-        third_actual = modifier.modify_case('ThiS')
+        first_actual = modifier.modify_case('ThiS', nil)
+        second_actual = modifier.modify_case('ThiS', nil)
+        third_actual = modifier.modify_case('ThiS', nil)
+
+        assert_equal first_expected, first_actual
+        assert_equal second_expected, second_actual
+        assert_equal third_expected, third_actual
+    end
+    def test_alternating_case_modifier_alternates_between_lowercase_and_uppercase_start_with_uppercase
+        modifier = AlternateCaseModifier.new(true)
+        first_expected = 'THIS'
+        second_expected = 'this'
+        third_expected = 'THIS'
+
+        first_actual = modifier.modify_case('ThiS', nil)
+        second_actual = modifier.modify_case('ThiS', nil)
+        third_actual = modifier.modify_case('ThiS', nil)
 
         assert_equal first_expected, first_actual
         assert_equal second_expected, second_actual
@@ -124,10 +137,9 @@ class CaseModifierTests < Test::Unit::TestCase
     end
     def test_modify_letters_in_words_with_large_random_value
         words = ['This' 'That', 'ThAt']
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
         passphrase.words = words
         letter_map = {'a' => '@'}
-        $RANDOM = 0.9
         expected = ['This' 'Th@t', 'Th@t']
         
         actual = passphrase.modify_letters_in_words(letter_map)
@@ -136,10 +148,9 @@ class CaseModifierTests < Test::Unit::TestCase
     end
     def test_modify_letters_in_words_with_small_random_value_the_letter_is_not_altered
         words = ['This' 'That', 'ThAt']
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.1))
         passphrase.words = words
         letter_map = {'a' => '@'}
-        $RANDOM = 0.1
         expected = ['This' 'That', 'ThAt']
         
         actual = passphrase.modify_letters_in_words(letter_map)
@@ -147,10 +158,9 @@ class CaseModifierTests < Test::Unit::TestCase
         assert_equal expected, actual
     end
     def test_modify_letters_with_large_random_value
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
         word = 'ThatAt'
         letter_map = {'a' => '@'}
-        $RANDOM = 0.9
         expected = 'Th@t@t'
 
         actual = passphrase.modify_letters(word, letter_map)
@@ -158,10 +168,9 @@ class CaseModifierTests < Test::Unit::TestCase
         assert_equal expected, actual
     end
     def test_modify_letters_with_small_random_value_the_letter_is_not_altered
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.1))
         word = 'ThatAt'
         letter_map = {'a' => '@'}
-        $RANDOM = 0.1
         expected = 'ThatAt'
 
         actual = passphrase.modify_letters(word, letter_map)
@@ -172,25 +181,23 @@ end
 
 class ModifyLetterTests < Test::Unit::TestCase
     def test_modify_letters_with_with_positive_cointoss
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
         expected = 'Th%s %s'
-        $RANDOM = 0.9
 
         actual = passphrase.modify_letters('This Is', {'i'=>'%'})
 
         assert_equal expected, actual
     end
     def test_modify_letters_with_with_negative_cointoss
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.1))
         expected = 'This Is'
-        $RANDOM = 0.1
 
         actual = passphrase.modify_letters('This Is', {'i'=>'%'})
 
         assert_equal expected, actual
     end
     def test_modify_one_letter_replaces_matching_letters
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
         expected = '%'
 
         actual = passphrase.modify_one_letter('i', {'i'=>'%'})
@@ -243,84 +250,80 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
     def test_zero_number_density_gives_no_numbers_injected
         injector = NumbersBetweenWordsInjector.new
         expected = ['a','b','c','d','e']
-        $ENTROPY = EntropyMock.new
-        $RANDOM = 0.9
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
         number_density = 0
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_low_number_density_gives_few_numbers_injected
         injector = NumbersBetweenWordsInjector.new
         expected = ['a','b','10','c','d','e']
-        $ENTROPY = EntropyArrayMock.new([0.9, 0.5, 0.1])
+        entropy = EntropyArrayMock.new([0.9, 0.5, 0.1])
         number_density = 0.2
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_high_number_density_gives_many_numbers_injected
         injector = NumbersBetweenWordsInjector.new
         expected = ['a','b','c','d','90','90','90','90','e']
-        $ENTROPY = EntropyMock.new
-        $RANDOM = 0.9
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
         number_density = 0.8
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_small_random_number_results_in_no_injection
         injector = NumbersBetweenWordsInjector.new
         expected = ['a','b']
-        $ENTROPY = EntropyMock.new
-        $RANDOM = 0.1
+        entropy = EntropyMockReturnsConstantValue.new(0.1)
         number_density = 0.5
 
-        actual = injector.inject_numbers(['a','b'], number_density)
+        actual = injector.inject_numbers(['a','b'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_large_random_number_results_in_injection
         injector = NumbersBetweenWordsInjector.new
         expected = ['a', '90', 'b']
-        $ENTROPY = EntropyMock.new
-        $RANDOM = 0.9
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
         number_density = 0.5
 
-        actual = injector.inject_numbers(['a','b'], number_density)
+        actual = injector.inject_numbers(['a','b'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_small_second_random_number_results_in_injection_early_in_the_strinng
         injector = NumbersBetweenWordsInjector.new
         expected = ['10', 'a','b','c','d','e']
-        $ENTROPY = EntropyArrayMock.new([0.9, 0.1, 0.1])
+        entropy = EntropyArrayMock.new([0.9, 0.1, 0.1])
         number_density = 0.25
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_large_second_random_number_results_in_injection_late_in_the_strinng
         injector = NumbersBetweenWordsInjector.new
         expected = ['a','b','c','d','e','10']
-        $ENTROPY = EntropyArrayMock.new([0.9, 1.0, 0.1])
+        entropy = EntropyArrayMock.new([0.9, 1.0, 0.1])
         number_density = 0.25
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_third_random_number_is_injected_in_the_string
         injector = NumbersBetweenWordsInjector.new
         expected = ['a','b','c','d','e','47']
-        $ENTROPY = EntropyArrayMock.new([0.9, 1.0, 0.47])
+        entropy = EntropyArrayMock.new([0.9, 1.0, 0.47])
         number_density = 0.25
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
@@ -332,61 +335,57 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
         expected = ['a','b','c','d','e']
         number_density = 0
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, EntropyMockReturnsConstantValue.new(0.9))
 
         assert_equal expected, actual
     end
     def test_low_number_density_gives_few_numbers_injected
         injector = NumbersAfterWordsInjector.new
         number_density = 0.2
-        $ENTROPY = EntropyMock.new
-        $RANDOM = 0.9
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
         expected = ['a','b','c','d','e90']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_high_number_density_gives_many_numbers_injected
         injector = NumbersAfterWordsInjector.new
         number_density = 1.0
-        $ENTROPY = EntropyMock.new
-        $RANDOM = 0.9
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
         expected = ['a90','b90','c90','d90','e90']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_small_random_number_results_in_no_injection
         injector = NumbersAfterWordsInjector.new
         number_density = 0.5
-        $ENTROPY = EntropyMock.new
-        $RANDOM = 0.1
+        entropy = EntropyMockReturnsConstantValue.new(0.1)
         expected = ['a','b','c','d','e']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_large_random_number_results_in_injection
         injector = NumbersAfterWordsInjector.new
         number_density = 1.0
-        $ENTROPY = EntropyMock.new
-        $RANDOM = 0.9
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
         expected = ['a90','b90','c90','d90','e90']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_small_second_random_number_results_in_injection_early_in_the_strinng
         injector = NumbersAfterWordsInjector.new
-        $ENTROPY = EntropyArrayMock.new([0.9, 0.1, 0.1, 0.1])
+        entropy = EntropyArrayMock.new([0.9, 0.1, 0.1, 0.1])
         number_density = 0.25
         expected = ['a10','b','c','d','e']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
@@ -397,20 +396,20 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
         random_number_locations = 0.9
         random_number_values = 0.13
         random_numbers = [random_number_density_scale, random_number_locations, random_number_values].flatten
-        $ENTROPY = EntropyArrayMock.new(random_numbers)
+        entropy = EntropyArrayMock.new(random_numbers)
         expected = ['a','b','c','d','e13']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_third_random_number_is_injected_in_the_strinng
         injector = NumbersAfterWordsInjector.new
         expected = ['a','b','c12','d','e']
-        $ENTROPY = EntropyArrayMock.new([0.9, 0.5, 0.12, 0.13]) # why is the 13 needed
+        entropy = EntropyArrayMock.new([0.9, 0.5, 0.12, 0.13]) # why is the 13 needed
         number_density = 0.25
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_density)
+        actual = injector.inject_numbers(['a','b','c','d','e'], number_density, entropy)
 
         assert_equal expected, actual
     end
@@ -423,32 +422,30 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_density)
+        actual = injector.inject_numbers(input, number_density, EntropyMockReturnsConstantValue.new(0.9))
 
         assert_equal expected, actual
     end
     def test_low_number_density_gives_few_numbers_injected
         injector = NumbersInsideWordsInjector.new
         number_density = 0.2
-        $ENTROPY = EntropyMock.new
-        $RANDOM = 0.9
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeee90e']
 
-        actual = injector.inject_numbers(input, number_density)
+        actual = injector.inject_numbers(input, number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_high_number_density_gives_many_numbers_injected
         injector = NumbersInsideWordsInjector.new
         number_density = 1.0
-        $ENTROPY = EntropyMock.new
-        $RANDOM = 0.9
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
 
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaa90a', 'bbbbbbbb90b', 'cccccccc90c', 'dddddddd90d', 'eeeeeeee90e']
 
-        actual = injector.inject_numbers(input, number_density)
+        actual = injector.inject_numbers(input, number_density, entropy)
 
         assert_equal expected, actual
     end
@@ -456,80 +453,79 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
         injector = NumbersInsideWordsInjector.new
         number_density = 1.0
         random_numbers = [0.0, 0.2]
-        $ENTROPY = EntropyArrayMock.new(random_numbers)
+        entropy = EntropyArrayMock.new(random_numbers)
 
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_density)
+        actual = injector.inject_numbers(input, number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_large_random_number_results_in_injection
         injector = NumbersInsideWordsInjector.new
         number_density = 1.0
-        $ENTROPY = EntropyMock.new
-        $RANDOM = 0.9
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
 
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaa90a','bbbbbbbb90b','cccccccc90c','dddddddd90d','eeeeeeee90e']
 
-        actual = injector.inject_numbers(input, number_density)
+        actual = injector.inject_numbers(input, number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_small_second_random_number_results_in_injection_early_in_the_strinng
         injector = NumbersInsideWordsInjector.new
-        $ENTROPY = EntropyArrayMock.new([0.9, 0.1, 0.1, 0.1, 0.1])
+        entropy = EntropyArrayMock.new([0.9, 0.1, 0.1, 0.1, 0.1])
         number_density = 0.25
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['10aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_density)
+        actual = injector.inject_numbers(input, number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_large_second_random_number_results_in_injection_late_in_the_strinng
         injector = NumbersInsideWordsInjector.new
-        $ENTROPY = EntropyArrayMock.new([0.9, 0.9, 0.1, 0.1, 0.1])
+        entropy = EntropyArrayMock.new([0.9, 0.9, 0.1, 0.1, 0.1])
         number_density = 0.25
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','10eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_density)
+        actual = injector.inject_numbers(input, number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_third_random_number_is_injected
         injector = NumbersInsideWordsInjector.new
-        $ENTROPY = EntropyArrayMock.new([0.9, 0.5, 0.2, 0.1, 0.1])
+        entropy = EntropyArrayMock.new([0.9, 0.5, 0.2, 0.1, 0.1])
         number_density = 0.25
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','20ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_density)
+        actual = injector.inject_numbers(input, number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_small_fourth_random_number_results_in_injection_early_in_the_word
         injector = NumbersInsideWordsInjector.new
-        $ENTROPY = EntropyArrayMock.new([0.9, 0.5, 0.1, 0.1])
+        entropy = EntropyArrayMock.new([0.9, 0.5, 0.1, 0.1])
         number_density = 0.25
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','10ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_density)
+        actual = injector.inject_numbers(input, number_density, entropy)
 
         assert_equal expected, actual
     end
     def test_large_fourth_random_number_results_in_injection_late_in_the_word
         injector = NumbersInsideWordsInjector.new
-        $ENTROPY = EntropyArrayMock.new([0.9, 0.5, 0.1, 1.0])
+        entropy = EntropyArrayMock.new([0.9, 0.5, 0.1, 1.0])
         number_density = 0.25
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc10','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_density)
+        actual = injector.inject_numbers(input, number_density, entropy)
 
         assert_equal expected, actual
     end
@@ -537,10 +533,9 @@ end
 
 class CreatePassPhraseTests < Test::Unit::TestCase
     def test_default_options
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
         options = default_options
         word_list = ['aa', 'bb', 'cc', 'dd']
-        $RANDOM = 0.9
         expected = 'dd dd dd dd dd dd'
         
         passphrase.create_pass_phrase(options, word_list)
@@ -549,12 +544,11 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         assert_equal expected, actual        
     end
     def test_min_word_count_with_small_random_number_value
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.1))
         options = default_options
         options[:min_word_count] = 6
         options[:max_word_count] = 8
         word_list = ['aa', 'bb', 'cc', 'dd']
-        $RANDOM = 0.1
         expected = 'aa aa aa aa aa aa'
         
         passphrase.create_pass_phrase(options, word_list)
@@ -563,12 +557,11 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         assert_equal expected, actual        
     end
     def test_max_word_count_with_large_random_number_value
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
         options = default_options
         options[:min_word_count] = 6
         options[:max_word_count] = 8
         word_list = ['aa', 'bb', 'cc', 'dd']
-        $RANDOM = 0.9
         expected = 'dd dd dd dd dd dd dd dd'
 
         passphrase.create_pass_phrase(options, word_list)
@@ -577,11 +570,10 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         assert_equal expected, actual        
     end
     def test_non_default_sepatator_character
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
         options = default_options
         options[:separator] = '-'
         word_list = ['aa', 'bb', 'cc', 'dd']
-        $RANDOM = 0.9
         expected = 'dd-dd-dd-dd-dd-dd'
 
         passphrase.create_pass_phrase(options, word_list)
@@ -590,11 +582,10 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         assert_equal expected, actual        
     end
     def test_inject_numbers_between_words
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
         options = default_options
         options[:number_injector] = NumbersBetweenWordsInjector.new
         word_list = ['aa', 'bb', 'cc', 'dd']
-        $RANDOM = 0.9
         expected = 'dd dd dd dd dd 90 90 90 dd'
 
         passphrase.create_pass_phrase(options, word_list)
@@ -603,11 +594,10 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         assert_equal expected, actual        
     end
     def test_inject_numbers_after_words
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.5))
         options = default_options
         options[:number_injector] = NumbersAfterWordsInjector.new
         word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']
-        $RANDOM = 0.5
         expected = 'ccccccccc ccccccccc ccccccccc50 ccccccccc50 ccccccccc'
 
         passphrase.create_pass_phrase(options, word_list)
@@ -616,11 +606,10 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         assert_equal expected, actual        
     end
     def test_inject_numbers_inside_words
-        passphrase = PassPhrase.new
+        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.5))
         options = default_options
         options[:number_injector] = NumbersInsideWordsInjector.new
         word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']
-        $RANDOM = 0.5
         expected = 'ccccccccc ccccccccc cccc50ccccc cccc50ccccc ccccccccc'
 
         passphrase.create_pass_phrase(options, word_list)
