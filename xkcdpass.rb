@@ -22,7 +22,7 @@ def main
     wordlist = read_dictionary_file(options[:file])
     10.times do
         $ENTROPY = Entropy.new
-        phrase = PassPhrase.new
+        phrase = PassPhrase.new([])
         result = phrase.create_pass_phrase(options, wordlist)
         puts "[#{$ENTROPY.entropy.to_i} bits] #{result}"
     end
@@ -123,13 +123,17 @@ def build_number_injector(mode)
 end
 
 class PassPhrase
+    attr_reader :words
+    def initialize(words)
+        @words = words
+    end
     def create_pass_phrase(options, wordlist)
         word_count = random_word_count(options[:min_word_count], options[:max_word_count])
-        words = random_words(wordlist, word_count)
-        words = modify_case(words, options[:case_mode])
-        words = modify_letters_in_words(words, options[:letter_map])
-        words = inject_numbers(words, options[:number_density], options[:number_injector])
-        words.join(options[:separator])
+        @words = random_words(wordlist, word_count)
+        @words = modify_case(options[:case_mode])
+        @words = modify_letters_in_words(options[:letter_map])
+        @words = inject_numbers(options[:number_density], options[:number_injector])
+        @words.join(options[:separator])
     end
 
     def random_word_count(minimum_word_count, maximum_word_count)
@@ -138,14 +142,14 @@ class PassPhrase
         minimum_word_count + random.to_i
     end
 
-    def modify_case(words, case_modifier)
-        words.map do |word|
+    def modify_case(case_modifier)
+        @words.map do |word|
             case_modifier.modify_case(word)
         end
     end
 
-    def modify_letters_in_words(words, letter_map)
-        words.map do |word|
+    def modify_letters_in_words(letter_map)
+        @words.map do |word|
             modify_letters(word, letter_map)
         end
     end
@@ -158,8 +162,8 @@ class PassPhrase
         letters.join('')
     end
 
-    def inject_numbers(words, number_density, numbers_injector)
-        numbers_injector.inject_numbers(words, number_density)
+    def inject_numbers(number_density, numbers_injector)
+        numbers_injector.inject_numbers(@words, number_density)
     end
 
     def modify_one_letter(letter, letter_map)
@@ -173,12 +177,12 @@ class PassPhrase
     end
 
     def random_words(word_list, number_of_words)
-        words = []
+        @words = []
         number_of_words.times do
             offset = $ENTROPY.random(word_list.size)
-            words << word_list[offset.to_i]
+            @words << word_list[offset.to_i]
         end
-        words
+        @words
     end
 end
 
