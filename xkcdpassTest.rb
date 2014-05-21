@@ -540,8 +540,9 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         $RANDOM = 0.9
         expected = 'dd dd dd dd dd dd'
         
-        actual = passphrase.create_pass_phrase(options, word_list)
-        
+        passphrase.create_pass_phrase(options, word_list)
+        actual = passphrase.to_s
+
         assert_equal expected, actual        
     end
     def test_min_word_count_with_small_random_number_value
@@ -553,8 +554,9 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         $RANDOM = 0.1
         expected = 'aa aa aa aa aa aa'
         
-        actual = passphrase.create_pass_phrase(options, word_list)
-        
+        passphrase.create_pass_phrase(options, word_list)
+        actual = passphrase.to_s
+
         assert_equal expected, actual        
     end
     def test_max_word_count_with_large_random_number_value
@@ -566,7 +568,8 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         $RANDOM = 0.9
         expected = 'dd dd dd dd dd dd dd dd'
 
-        actual = passphrase.create_pass_phrase(options, word_list)
+        passphrase.create_pass_phrase(options, word_list)
+        actual = passphrase.to_s
 
         assert_equal expected, actual        
     end
@@ -578,7 +581,8 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         $RANDOM = 0.9
         expected = 'dd-dd-dd-dd-dd-dd'
 
-        actual = passphrase.create_pass_phrase(options, word_list)
+        passphrase.create_pass_phrase(options, word_list)
+        actual = passphrase.to_s
 
         assert_equal expected, actual        
     end
@@ -590,7 +594,8 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         $RANDOM = 0.9
         expected = 'dd dd dd dd dd 90 90 90 dd'
 
-        actual = passphrase.create_pass_phrase(options, word_list)
+        passphrase.create_pass_phrase(options, word_list)
+        actual = passphrase.to_s
 
         assert_equal expected, actual        
     end
@@ -602,7 +607,8 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         $RANDOM = 0.5
         expected = 'ccccccccc ccccccccc ccccccccc50 ccccccccc50 ccccccccc'
 
-        actual = passphrase.create_pass_phrase(options, word_list)
+        passphrase.create_pass_phrase(options, word_list)
+        actual = passphrase.to_s
 
         assert_equal expected, actual        
     end
@@ -614,7 +620,8 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         $RANDOM = 0.5
         expected = 'ccccccccc ccccccccc cccc50ccccc cccc50ccccc ccccccccc'
 
-        actual = passphrase.create_pass_phrase(options, word_list)
+        passphrase.create_pass_phrase(options, word_list)
+        actual = passphrase.to_s
 
         assert_equal expected, actual        
     end

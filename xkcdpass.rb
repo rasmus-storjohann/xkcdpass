@@ -23,8 +23,8 @@ def main
     10.times do
         $ENTROPY = Entropy.new
         phrase = PassPhrase.new([])
-        result = phrase.create_pass_phrase(options, wordlist)
-        puts "[#{$ENTROPY.entropy.to_i} bits] #{result}"
+        phrase.create_pass_phrase(options, wordlist)
+        puts "[#{$ENTROPY.entropy.to_i} bits] #{phrase.to_s}"
     end
 end
 
@@ -126,6 +126,10 @@ class PassPhrase
     attr_reader :words
     def initialize(words)
         @words = words
+        @separator = ''
+    end
+    def to_s
+        @words.join(@separator)
     end
     def create_pass_phrase(options, wordlist)
         word_count = random_word_count(options[:min_word_count], options[:max_word_count])
@@ -133,7 +137,7 @@ class PassPhrase
         modify_case(options[:case_mode])
         modify_letters_in_words(options[:letter_map])
         inject_numbers(options[:number_density], options[:number_injector])
-        @words.join(options[:separator])
+        @separator = options[:separator]
     end
     def random_word_count(minimum_word_count, maximum_word_count)
         range = maximum_word_count - minimum_word_count + 1
@@ -161,7 +165,7 @@ class PassPhrase
         numbers_injector.inject_numbers(@words, number_density)
     end
     def modify_one_letter(letter, letter_map)
-        alternate = letter_map[ letter.downcase ]
+        alternate = letter_map[letter.downcase]
         choin_toss = $ENTROPY.random(2) == 1
         if alternate && choin_toss
             alternate
