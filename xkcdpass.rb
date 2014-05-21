@@ -129,10 +129,10 @@ class PassPhrase
     end
     def create_pass_phrase(options, wordlist)
         word_count = random_word_count(options[:min_word_count], options[:max_word_count])
-        @words = random_words(wordlist, word_count)
-        @words = modify_case(options[:case_mode])
-        @words = modify_letters_in_words(options[:letter_map])
-        @words = inject_numbers(options[:number_density], options[:number_injector])
+        random_words(wordlist, word_count)
+        modify_case(options[:case_mode])
+        modify_letters_in_words(options[:letter_map])
+        inject_numbers(options[:number_density], options[:number_injector])
         @words.join(options[:separator])
     end
 
@@ -143,13 +143,13 @@ class PassPhrase
     end
 
     def modify_case(case_modifier)
-        @words.map do |word|
+        @words.map! do |word|
             case_modifier.modify_case(word)
         end
     end
 
     def modify_letters_in_words(letter_map)
-        @words.map do |word|
+        @words.map! do |word|
             modify_letters(word, letter_map)
         end
     end
@@ -182,7 +182,6 @@ class PassPhrase
             offset = $ENTROPY.random(word_list.size)
             @words << word_list[offset.to_i]
         end
-        @words
     end
 end
 
