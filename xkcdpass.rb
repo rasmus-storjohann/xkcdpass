@@ -22,8 +22,9 @@ def main
     wordlist = read_dictionary_file(options[:file])
     10.times do
         $ENTROPY = Entropy.new
-        phrase = create_pass_phrase(options, wordlist)
-        puts "[#{$ENTROPY.entropy.to_i} bits] #{phrase}"
+        phrase = PassPhrase.new
+        result = phrase.create_pass_phrase(options, wordlist)
+        puts "[#{$ENTROPY.entropy.to_i} bits] #{result}"
     end
 end
 
@@ -121,62 +122,64 @@ def build_number_injector(mode)
     end
 end
 
-def create_pass_phrase(options, wordlist)
-    word_count = random_word_count(options[:min_word_count], options[:max_word_count])
-    words = random_words(wordlist, word_count)
-    words = modify_case(words, options[:case_mode])
-    words = modify_letters_in_words(words, options[:letter_map])
-    words = inject_numbers(words, options[:number_density], options[:number_injector])
-    words.join(options[:separator])
-end
-
-def random_word_count(minimum_word_count, maximum_word_count)
-    range = maximum_word_count - minimum_word_count + 1
-    random = $ENTROPY.random(range)
-    minimum_word_count + random.to_i
-end
-
-def modify_case(words, case_modifier)
-    words.map do |word|
-        case_modifier.modify_case(word)
+class PassPhrase
+    def create_pass_phrase(options, wordlist)
+        word_count = random_word_count(options[:min_word_count], options[:max_word_count])
+        words = random_words(wordlist, word_count)
+        words = modify_case(words, options[:case_mode])
+        words = modify_letters_in_words(words, options[:letter_map])
+        words = inject_numbers(words, options[:number_density], options[:number_injector])
+        words.join(options[:separator])
     end
-end
 
-def modify_letters_in_words(words, letter_map)
-    words.map do |word|
-        modify_letters(word, letter_map)
+    def random_word_count(minimum_word_count, maximum_word_count)
+        range = maximum_word_count - minimum_word_count + 1
+        random = $ENTROPY.random(range)
+        minimum_word_count + random.to_i
     end
-end
 
-def modify_letters(word, letter_map)
-    letters = word.split('')
-    letters.map! do |letter|
-        modify_one_letter(letter, letter_map)
+    def modify_case(words, case_modifier)
+        words.map do |word|
+            case_modifier.modify_case(word)
+        end
     end
-    letters.join('')
-end
 
-def inject_numbers(words, number_density, numbers_injector)
-    numbers_injector.inject_numbers(words, number_density)
-end
-
-def modify_one_letter(letter, letter_map)
-    alternate = letter_map[ letter.downcase ]
-    choin_toss = $ENTROPY.random(2) == 1
-    if alternate && choin_toss
-        alternate
-    else
-        letter
+    def modify_letters_in_words(words, letter_map)
+        words.map do |word|
+            modify_letters(word, letter_map)
+        end
     end
-end
 
-def random_words(word_list, number_of_words)
-    words = []
-    number_of_words.times do
-        offset = $ENTROPY.random(word_list.size)
-        words << word_list[offset.to_i]
+    def modify_letters(word, letter_map)
+        letters = word.split('')
+        letters.map! do |letter|
+            modify_one_letter(letter, letter_map)
+        end
+        letters.join('')
     end
-    words
+
+    def inject_numbers(words, number_density, numbers_injector)
+        numbers_injector.inject_numbers(words, number_density)
+    end
+
+    def modify_one_letter(letter, letter_map)
+        alternate = letter_map[ letter.downcase ]
+        choin_toss = $ENTROPY.random(2) == 1
+        if alternate && choin_toss
+            alternate
+        else
+            letter
+        end
+    end
+
+    def random_words(word_list, number_of_words)
+        words = []
+        number_of_words.times do
+            offset = $ENTROPY.random(word_list.size)
+            words << word_list[offset.to_i]
+        end
+        words
+    end
 end
 
 def read_dictionary_file(filename)

@@ -113,50 +113,55 @@ class CaseModifierTests < Test::Unit::TestCase
         assert_equal third_expected, third_actual
     end
     def test_modify_case
+        passphrase = PassPhrase.new
         words = ['this', 'THAT']
         expected = ['This', 'That']
         
-        actual = modify_case(words, CapitalizeCaseModifier.new)
+        actual = passphrase.modify_case(words, CapitalizeCaseModifier.new)
 
         assert_equal expected, actual
     end
     def test_modify_letters_in_words_with_large_random_value
+        passphrase = PassPhrase.new
         words = ['This' 'That', 'ThAt']
         letter_map = {'a' => '@'}
         $RANDOM = 0.9
         expected = ['This' 'Th@t', 'Th@t']
         
-        actual = modify_letters_in_words(words, letter_map)
+        actual = passphrase.modify_letters_in_words(words, letter_map)
         
         assert_equal expected, actual
     end
     def test_modify_letters_in_words_with_small_random_value_the_letter_is_not_altered
+        passphrase = PassPhrase.new
         words = ['This' 'That', 'ThAt']
         letter_map = {'a' => '@'}
         $RANDOM = 0.1
         expected = ['This' 'That', 'ThAt']
         
-        actual = modify_letters_in_words(words, letter_map)
+        actual = passphrase.modify_letters_in_words(words, letter_map)
         
         assert_equal expected, actual
     end
     def test_modify_letters_with_large_random_value
+        passphrase = PassPhrase.new
         word = 'ThatAt'
         letter_map = {'a' => '@'}
         $RANDOM = 0.9
         expected = 'Th@t@t'
 
-        actual = modify_letters(word, letter_map)
+        actual = passphrase.modify_letters(word, letter_map)
 
         assert_equal expected, actual
     end
     def test_modify_letters_with_small_random_value_the_letter_is_not_altered
+        passphrase = PassPhrase.new
         word = 'ThatAt'
         letter_map = {'a' => '@'}
         $RANDOM = 0.1
         expected = 'ThatAt'
 
-        actual = modify_letters(word, letter_map)
+        actual = passphrase.modify_letters(word, letter_map)
 
         assert_equal expected, actual
     end
@@ -164,32 +169,36 @@ end
 
 class ModifyLetterTests < Test::Unit::TestCase
     def test_modify_letters_with_with_positive_cointoss
+        passphrase = PassPhrase.new
         expected = 'Th%s %s'
         $RANDOM = 0.9
 
-        actual = modify_letters('This Is', {'i'=>'%'})
+        actual = passphrase.modify_letters('This Is', {'i'=>'%'})
 
         assert_equal expected, actual
     end
     def test_modify_letters_with_with_negative_cointoss
+        passphrase = PassPhrase.new
         expected = 'This Is'
         $RANDOM = 0.1
 
-        actual = modify_letters('This Is', {'i'=>'%'})
+        actual = passphrase.modify_letters('This Is', {'i'=>'%'})
 
         assert_equal expected, actual
     end
     def test_modify_one_letter_replaces_matching_letters
+        passphrase = PassPhrase.new
         expected = '%'
 
-        actual = modify_one_letter('i', {'i'=>'%'})
+        actual = passphrase.modify_one_letter('i', {'i'=>'%'})
 
         assert_equal expected, actual
     end
     def test_modify_one_letter_returns_nonmatching_letters_unchanged
+        passphrase = PassPhrase.new
         expected = 't'
 
-        actual = modify_one_letter('t', {'i'=>'%'})
+        actual = passphrase.modify_one_letter('t', {'i'=>'%'})
 
         assert_equal expected, actual
     end
@@ -527,16 +536,18 @@ end
 
 class CreatePassPhraseTests < Test::Unit::TestCase
     def test_default_options
+        passphrase = PassPhrase.new
         options = default_options
         word_list = ['aa', 'bb', 'cc', 'dd']
         $RANDOM = 0.9
         expected = 'dd dd dd dd dd dd'
         
-        actual = create_pass_phrase(options, word_list)
+        actual = passphrase.create_pass_phrase(options, word_list)
         
         assert_equal expected, actual        
     end
     def test_min_word_count_with_small_random_number_value
+        passphrase = PassPhrase.new
         options = default_options
         options[:min_word_count] = 6
         options[:max_word_count] = 8
@@ -544,11 +555,12 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         $RANDOM = 0.1
         expected = 'aa aa aa aa aa aa'
         
-        actual = create_pass_phrase(options, word_list)
+        actual = passphrase.create_pass_phrase(options, word_list)
         
         assert_equal expected, actual        
     end
     def test_max_word_count_with_large_random_number_value
+        passphrase = PassPhrase.new
         options = default_options
         options[:min_word_count] = 6
         options[:max_word_count] = 8
@@ -556,51 +568,55 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         $RANDOM = 0.9
         expected = 'dd dd dd dd dd dd dd dd'
 
-        actual = create_pass_phrase(options, word_list)
+        actual = passphrase.create_pass_phrase(options, word_list)
 
         assert_equal expected, actual        
     end
     def test_non_default_sepatator_character
+        passphrase = PassPhrase.new
         options = default_options
         options[:separator] = '-'
         word_list = ['aa', 'bb', 'cc', 'dd']
         $RANDOM = 0.9
         expected = 'dd-dd-dd-dd-dd-dd'
 
-        actual = create_pass_phrase(options, word_list)
+        actual = passphrase.create_pass_phrase(options, word_list)
 
         assert_equal expected, actual        
     end
     def test_inject_numbers_between_words
+        passphrase = PassPhrase.new
         options = default_options
         options[:number_injector] = NumbersBetweenWordsInjector.new
         word_list = ['aa', 'bb', 'cc', 'dd']
         $RANDOM = 0.9
         expected = 'dd dd dd dd dd 90 90 90 dd'
 
-        actual = create_pass_phrase(options, word_list)
+        actual = passphrase.create_pass_phrase(options, word_list)
 
         assert_equal expected, actual        
     end
     def test_inject_numbers_after_words
+        passphrase = PassPhrase.new
         options = default_options
         options[:number_injector] = NumbersAfterWordsInjector.new
         word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']
         $RANDOM = 0.5
         expected = 'ccccccccc ccccccccc ccccccccc50 ccccccccc ccccccccc'
 
-        actual = create_pass_phrase(options, word_list)
+        actual = passphrase.create_pass_phrase(options, word_list)
 
         assert_equal expected, actual        
     end
     def test_inject_numbers_inside_words
+        passphrase = PassPhrase.new
         options = default_options
         options[:number_injector] = NumbersInsideWordsInjector.new
         word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']
         $RANDOM = 0.5
         expected = 'ccccccccc ccccccccc cccc50ccccc ccccccccc ccccccccc'
 
-        actual = create_pass_phrase(options, word_list)
+        actual = passphrase.create_pass_phrase(options, word_list)
 
         assert_equal expected, actual        
     end
