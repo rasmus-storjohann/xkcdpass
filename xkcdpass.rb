@@ -22,7 +22,7 @@ def main
     wordlist = read_dictionary_file(options[:file])
     10.times do
         $ENTROPY = Entropy.new
-        phrase = PassPhrase.new([])
+        phrase = PassPhrase.new
         phrase.create_pass_phrase(options, wordlist)
         puts "[#{$ENTROPY.entropy.to_i} bits] #{phrase.to_s}"
     end
@@ -123,9 +123,9 @@ def build_number_injector(mode)
 end
 
 class PassPhrase
-    attr_reader :words
-    def initialize(words)
-        @words = words
+    attr_accessor :words
+    def initialize
+        @words = []
         @separator = ''
     end
     def to_s
