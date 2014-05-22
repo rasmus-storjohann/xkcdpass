@@ -5,12 +5,6 @@ require 'set'
 
 # Plan: 
  
-# Make passpharse a class with members passpharse and entropy, since these belong together
-
-# Add options for --haystack-complexity and --complexty, the former computing the set of sets of characters 
-# (lower case, upper case, symbols, digits), adding up log(2) of the cardinality of each set, multiplied by the
-# length of the string, and that gives the brute force attack complexity.
-
 # Add option for prepadding (string) and postpadding (string) which add zero complexity but non-zero haystack complexity
 
 # Add option for adding misspellings, remove or duplicate single letters
@@ -20,10 +14,14 @@ require 'set'
 def main
     options = parse_command_line_options
     wordlist = read_dictionary_file(options[:file])
-    10.times do
+    options[:phrase_count].times do
         phrase = PassPhrase.new
         phrase.create_pass_phrase(options, wordlist)
-        puts "[#{phrase.entropy.to_i} bits] #{phrase.to_s}"
+        if options[:verbose]
+            puts "[#{phrase.entropy.to_i}, #{phrase.haystack_entropy.to_i}]: #{phrase}"
+        else
+            puts phrase
+        end
     end
 end
 
@@ -37,11 +35,8 @@ def parse_command_line_options
         opts.on('-f', '--file FILE', 'Dictionary file to use') do |file|
             options[:file] = file
         end
-        opts.on('-i', '--min_word_count MIN', 'Minimum number of words') do |min|
-            options[:min_word_count] = min.to_i
-        end
-        opts.on('-a', '--max_word_count MAX', 'Maximum number of words') do |max|
-            options[:max_word_count] = max.to_i
+        opts.on('-w', '--word_count COUNT', 'Number of words') do |count|
+            options[:word_count] = count.to_i
         end
         opts.on('-s', '--separator STRING', 'String used to separate words') do |separator|
             options[:separator] = separator
@@ -55,6 +50,12 @@ def parse_command_line_options
         opts.on('-d', '--density NUMBER_DENSITY', 'Number between 0 and 1, higher value gives more digits in the string') do |number|
             options[:number_density] = number.to_f
         end
+        opts.on('-p', '--phrase_count COUNT', 'Number of pass phrases to generate') do |d|
+            options[:phrase_count] = d.to_i
+        end
+        opts.on('-v', '--verbose', 'Show complexity of the password') do
+            options[:verbose] = true
+        end
     end
     optionParser.parse!
     options
@@ -63,13 +64,14 @@ end
 def default_options
     {
         :file => 'sample_dict.txt',
-        :min_word_count => 4,
-        :max_word_count => 6,
+        :word_count => 4,
         :separator => ' ',
         :case_mode => NullCaseModifier.new,
         :number_injector => NullNumbersInjector.new,
         :number_density => 0.5,
-        :letter_map => {}
+        :letter_map => {},
+        :phrase_count => 1,
+        :verbose => false
     }
 end
 
@@ -131,21 +133,18 @@ class PassPhrase
     def entropy
         @entropy.entropy
     end
+    def haystack_entropy
+        haystack(to_s)
+    end
     def to_s
         @words.join(@separator)
     end
     def create_pass_phrase(options, wordlist)
         @separator = options[:separator]
-        word_count = random_word_count(options[:min_word_count], options[:max_word_count])
-        random_words(wordlist, word_count)
+        random_words(wordlist, options[:word_count])
         modify_case(options[:case_mode])
         modify_letters_in_words(options[:letter_map])
         inject_numbers(options[:number_density], options[:number_injector])
-    end
-    def random_word_count(minimum_word_count, maximum_word_count)
-        range = maximum_word_count - minimum_word_count + 1
-        random = @entropy.random(range)
-        minimum_word_count + random.to_i
     end
     def modify_case(case_modifier)
         @words.map! do |word|
@@ -191,9 +190,23 @@ class Entropy
         @entropy = 0
     end
     def random(max)
-        @entropy += Math.log(max)/Math.log(2)
+        @entropy += log2(max)
         return (max * rand()).to_i
     end
+end
+
+def log2(value)
+    Math.log(value)/Math.log(2)
+end
+
+def haystack(string)
+    logs = 0
+    logs += log2(('a'..'z').count) if string =~ /[a-z]/
+    logs += log2(('A'..'Z').count) if string =~ /[A-Z]/
+    logs += log2(('0'..'9').count) if string =~ /[0-9]/
+    symbols = '!@#$%^&*()-_=+{[}]:;"\'|\<,>.?/'
+    logs += log2(symbols.count) if string =~ /#{symbols}/
+    logs * string.length
 end
 
 def read_dictionary_file(filename)
