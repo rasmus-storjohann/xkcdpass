@@ -165,12 +165,8 @@ class PassPhrase
     end
     def modify_one_letter(letter, letter_map)
         alternate = letter_map[letter.downcase]
-        choin_toss = @entropy.random(2) == 1
-        if alternate && choin_toss
-            alternate
-        else
-            letter
-        end
+        choin_toss = alternate && (@entropy.random(2) == 1)
+        choin_toss ? alternate : letter
     end
     def inject_numbers(number_density, numbers_injector)
         numbers_injector.inject_numbers(@words, number_density, @entropy)
