@@ -74,7 +74,7 @@ def default_options
         :file => '/usr/share/dict/words',
         :word_count => 4,
         :separator => ' ',
-        :case_mode => NullCaseModifier.new,
+        :case_mode => NullModifier.new,
         :number_injector => NumbersBetweenWordsInjector.new,
         :number_count => 0,
         #:letter_map => {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'},
@@ -151,13 +151,13 @@ class PassPhrase
     def create_pass_phrase(options, wordlist)
         @separator = options[:separator]
         random_words(wordlist, options[:word_count])
-        modify_case(options[:case_mode])
+        mutate(options[:case_mode])
         modify_letters_in_words(options[:letter_map])
         inject_numbers(options[:number_count], options[:number_injector])
     end
-    def modify_case(case_modifier)
+    def mutate(case_modifier)
         @words.map! do |word|
-            case_modifier.modify_case(word, @entropy)
+            case_modifier.mutate(word, @entropy)
         end
     end
     def modify_letters_in_words(letter_map)
@@ -238,32 +238,32 @@ def read_dictionary_file(filename)
     words.sort.uniq
 end
 
-class NullCaseModifier
-    def modify_case(word, entropy)
+class NullModifier
+    def mutate(word, entropy)
         word
     end
 end
 
 class UpCaseModifier
-    def modify_case(word, entropy)
+    def mutate(word, entropy)
         word.upcase
     end
 end
 
 class DownCaseModifier
-    def modify_case(word, entropy)
+    def mutate(word, entropy)
         word.downcase
     end
 end
 
 class CapitalizeCaseModifier
-    def modify_case(word, entropy)
+    def mutate(word, entropy)
         word.capitalize
     end
 end
 
 class RandomWordCaseModifier
-    def modify_case(word, entropy)
+    def mutate(word, entropy)
         random = entropy.random(3)
         case random
             when 0
@@ -280,7 +280,7 @@ class AlternateCaseModifier
     def initialize(start_with_upcase)
         @upcase = start_with_upcase
     end
-    def modify_case(word, entropy)
+    def mutate(word, entropy)
         if @upcase
             @upcase = false
             word.upcase
