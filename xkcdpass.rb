@@ -55,8 +55,8 @@ def parse_command_line_options
         opts.on('-n', '--numbers NUMBERS_MODE', "One of  'between', 'after' or 'inside'") do |mode|
             options[:number_injector] = build_number_injector_terminate_on_exception(mode)
         end
-        opts.on('-d', '--density NUMBER_DENSITY', 'Number between 0 and 1, higher value gives more digits in the string') do |number|
-            options[:number_density] = number.to_f
+        opts.on('-d', '--number_count NUMBER', 'How many nunbers in the string') do |number|
+            options[:number_count] = number.to_i
         end
         opts.on('-p', '--phrase_count COUNT', 'Number of pass phrases to generate') do |d|
             options[:phrase_count] = d.to_i
@@ -75,8 +75,8 @@ def default_options
         :word_count => 4,
         :separator => ' ',
         :case_mode => NullCaseModifier.new,
-        :number_injector => NullNumbersInjector.new,
-        :number_density => 0.5,
+        :number_injector => NumbersBetweenWordsInjector.new,
+        :number_count => 0,
         #:letter_map => {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'},
         :letter_map => {},
         :phrase_count => 1,
@@ -102,7 +102,7 @@ def build_case_modifier(mode)
         when :capitalize
             CapitalizeCaseModifier.new
         when :random
-            RandomCaseModifier.new
+            RandomWordCaseModifier.new
         when :alternate
             AlternateCaseModifier.new(true) # TODO fix this
         else
@@ -153,7 +153,7 @@ class PassPhrase
         random_words(wordlist, options[:word_count])
         modify_case(options[:case_mode])
         modify_letters_in_words(options[:letter_map])
-        inject_numbers(options[:number_density], options[:number_injector])
+        inject_numbers(options[:number_count], options[:number_injector])
     end
     def modify_case(case_modifier)
         @words.map! do |word|
@@ -177,8 +177,10 @@ class PassPhrase
         choin_toss = alternate && (@entropy.random(2) == 1)
         choin_toss ? alternate : letter
     end
-    def inject_numbers(number_density, numbers_injector)
-        numbers_injector.inject_numbers(@words, number_density, @entropy)
+    def pick_random_point_in_strinng
+    end
+    def inject_numbers(number_count, numbers_injector)
+        numbers_injector.inject_numbers(@words, number_count, @entropy)
     end
     def random_words(word_list, number_of_words)
         @words = []
@@ -260,7 +262,7 @@ class CapitalizeCaseModifier
     end
 end
 
-class RandomCaseModifier
+class RandomWordCaseModifier
     def modify_case(word, entropy)
         random = entropy.random(3)
         case random
@@ -290,17 +292,17 @@ class AlternateCaseModifier
 end
 
 class NullNumbersInjector
-    def inject_numbers(words, number_density, entropy)
+    def inject_numbers(words, number_count, entropy)
         words
     end
 end
 
 class BaseNumberInjector
-    def hom_many_numbers_to_inject(word_count, number_density, entropy)
-        # expectation_value = word_count * number_density
+    def hom_many_numbers_to_inject(word_count, number_count, entropy)
+        # expectation_value = word_count * number_count
         # entropy.random(2 * expectation_value)
         jitter_with_average_of_one = entropy.random(2) # TODO this is dodgy, really a random float, which is against intention
-        hom_many = word_count * number_density * jitter_with_average_of_one
+        hom_many = word_count * number_count * jitter_with_average_of_one
         hom_many.to_i
     end
     def make_random_number_string(entropy)
@@ -309,9 +311,8 @@ class BaseNumberInjector
 end
 
 class NumbersBetweenWordsInjector < BaseNumberInjector
-    def inject_numbers(words, number_density, entropy)
-        how_many = hom_many_numbers_to_inject(words.size, number_density, entropy)
-        how_many.times do
+    def inject_numbers(words, number_count, entropy)
+        number_count.times do
             offset = entropy.random(words.size).to_i
             random_number_string = make_random_number_string(entropy)
             words.insert(offset, random_number_string)
@@ -321,9 +322,8 @@ class NumbersBetweenWordsInjector < BaseNumberInjector
 end
 
 class NumbersInWordsInjectorBase < BaseNumberInjector
-    def inject_numbers(words, number_density, entropy)
-        how_many = hom_many_numbers_to_inject(words.size, number_density, entropy)
-        offsets_to_modify = compute_random_offsets(words.size, how_many, entropy)
+    def inject_numbers(words, number_count, entropy)
+        offsets_to_modify = compute_random_offsets(words.size, number_count, entropy)
         offsets_to_modify.each do |offset|
             words[offset] = inject_number_in_word(words[offset], make_random_number_string(entropy), entropy)
         end
