@@ -5,11 +5,19 @@ require 'set'
 
 # Plan: 
  
-# Add option for prepadding (string) and postpadding (string) which add zero complexity but non-zero haystack complexity
+# Add option for prepadding (string) and postpadding (string) which add zero complexity but non-zero haystack complexity,
+# source is https://www.grc.com/haystack.htm
 
 # Add option for adding misspellings, remove or duplicate single letters
 
+# Add option for stutter, find a syllable and repeat it several times
+
 # Add option for randomizing all option values, which contributes to internal complexity
+
+# https://github.com/beala/xkcd-password
+# https://github.com/redacted/XKCD-password-generator
+# https://github.com/thialfihar/xkcd-password-generator
+
 
 def main
     options = parse_command_line_options
@@ -18,7 +26,7 @@ def main
         phrase = PassPhrase.new
         phrase.create_pass_phrase(options, wordlist)
         if options[:verbose]
-            puts "[#{phrase.entropy.to_i}, #{phrase.haystack_entropy.to_i}]: #{phrase}"
+            puts "[#{phrase.complexity.to_i}, #{HaystackBruteForceComplexity.new.compute(phrase.to_s)}]: #{phrase}"
         else
             puts phrase
         end
@@ -63,12 +71,13 @@ end
 
 def default_options
     {
-        :file => 'sample_dict.txt',
+        :file => '/usr/share/dict/words',
         :word_count => 4,
         :separator => ' ',
         :case_mode => NullCaseModifier.new,
         :number_injector => NullNumbersInjector.new,
         :number_density => 0.5,
+        #:letter_map => {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'},
         :letter_map => {},
         :phrase_count => 1,
         :verbose => false
@@ -130,8 +139,8 @@ class PassPhrase
         @words  = []
         @separator = ''
     end
-    def entropy
-        @entropy.entropy
+    def complexity
+        @entropy.complexity
     end
     def haystack_entropy
         haystack(to_s)
@@ -181,13 +190,33 @@ class PassPhrase
 end
 
 class Entropy
-    attr_reader :entropy
+    attr_reader :complexity
     def initialize
-        @entropy = 0
+        @complexity = 0
     end
     def random(max)
-        @entropy += log2(max)
+        @complexity += log2(max)
         return (max * rand()).to_i
+    end
+end
+
+$SYMBOLS = '!@#$%^&*()-_=+{[}]:;"\'|\<,>.?/'
+
+class NaiveBruteForceComplexity
+    def compute(string)
+        domain = ('a'..'z').count + ('A'..'Z').count + ('0'..'9').count + $SYMBOLS.count
+        log2(domain) * string.length
+    end
+end
+
+class HaystackBruteForceComplexity
+    def compute(string)
+        logs = 0
+        logs += log2(('a'..'z').count) if string =~ /[a-z]/
+        logs += log2(('A'..'Z').count) if string =~ /[A-Z]/
+        logs += log2(('0'..'9').count) if string =~ /[0-9]/
+        logs += log2($SYMBOLS.count) if string =~ /#{$SYMBOLS}/
+        logs * string.length
     end
 end
 
@@ -195,21 +224,11 @@ def log2(value)
     Math.log(value)/Math.log(2)
 end
 
-def haystack(string)
-    logs = 0
-    logs += log2(('a'..'z').count) if string =~ /[a-z]/
-    logs += log2(('A'..'Z').count) if string =~ /[A-Z]/
-    logs += log2(('0'..'9').count) if string =~ /[0-9]/
-    symbols = '!@#$%^&*()-_=+{[}]:;"\'|\<,>.?/'
-    logs += log2(symbols.count) if string =~ /#{symbols}/
-    logs * string.length
-end
-
 def read_dictionary_file(filename)
     words = []
     File.open(filename, 'r') do |file|
         while (line = file.gets)
-            if (line !~ /^\#/)
+            if (line !~ /^\#/ && line !~ /\'/)
                 words << line.strip
             end
         end
@@ -278,7 +297,6 @@ end
 
 class BaseNumberInjector
     def hom_many_numbers_to_inject(word_count, number_density, entropy)
-        # better, but tests are failing:
         # expectation_value = word_count * number_density
         # entropy.random(2 * expectation_value)
         jitter_with_average_of_one = entropy.random(2) # TODO this is dodgy, really a random float, which is against intention
@@ -335,7 +353,7 @@ end
 
 class NumbersInsideWordsInjector < NumbersInWordsInjectorBase
     def inject_number_in_word(word, number, entropy)
-        offset_to_insert = entropy.random(word.size).to_i        
+        offset_to_insert = entropy.random(word.size)
         word.insert(offset_to_insert, number)
     end
 end
