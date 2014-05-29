@@ -333,7 +333,7 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
         expected = ['a','b','c','d','e']
         entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1])
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -343,7 +343,7 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
         expected = ['20','40','a','b','c','d','e']
         entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.2, 0.3, 0.4])
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -353,7 +353,7 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
         expected = ['10', 'a','b','c','d','e']
         entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1])
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -363,7 +363,7 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
         expected = ['a','b','c','d','e','10']
         entropy = EntropyMockReturnsValuesFromArray.new([1.0, 0.1])
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -373,7 +373,7 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
         expected = ['a','b','c','d','e','47']
         entropy = EntropyMockReturnsValuesFromArray.new([1.0, 0.47])
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -386,7 +386,7 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
         entropy = EntropyMockReturnsValuesFromArray.new([])
         expected = ['a','b','c','d','e']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -396,7 +396,7 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
         entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.2, 0.3, 0.4])
         expected = ['a30','b40','c','d','e']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -406,7 +406,7 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
         entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1, 0.1])
         expected = ['a10','b','c','d','e']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -419,7 +419,7 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
         entropy = EntropyMockReturnsValuesFromArray.new(random_numbers)
         expected = ['a','b','c','d','e13']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -429,7 +429,7 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
         expected = ['a','b','c12','d','e']
         entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.12])
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -443,7 +443,7 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, entropy)
+        actual = injector.mutate(input, entropy)
 
         assert_equal expected, actual
     end
@@ -454,7 +454,7 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddd50dd','eeeee70eeee']
 
-        actual = injector.inject_numbers(input, entropy)
+        actual = injector.mutate(input, entropy)
 
         assert_equal expected, actual
     end
@@ -465,7 +465,7 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['10aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, entropy)
+        actual = injector.mutate(input, entropy)
 
         assert_equal expected, actual
     end
@@ -476,7 +476,7 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','10eeeeeeeee']
 
-        actual = injector.inject_numbers(input, entropy)
+        actual = injector.mutate(input, entropy)
 
         assert_equal expected, actual
     end
@@ -487,7 +487,7 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','20ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, entropy)
+        actual = injector.mutate(input, entropy)
 
         assert_equal expected, actual
     end
@@ -498,7 +498,7 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','10ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, entropy)
+        actual = injector.mutate(input, entropy)
 
         assert_equal expected, actual
     end
@@ -509,7 +509,7 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc10','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, entropy)
+        actual = injector.mutate(input, entropy)
 
         assert_equal expected, actual
     end

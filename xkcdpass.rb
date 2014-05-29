@@ -82,7 +82,7 @@ class Application
             :word_count => 4,
             :separator => ' ',
             :case_mode => NullModifier.new,
-            :number_injector => NumbersBetweenWordsInjector.new(0), # TODO make this a NullModiifer
+            :number_injector => NullModifier.new,
             :number_count => 0,
             :stutter_injector => StutterModifier.new,
             :stutter_count => 0,
@@ -165,7 +165,7 @@ class PassPhrase
         inject_stutters(options[:stutter_count], options[:stutter_injector])
         @words = options[:case_mode].mutate(@words, @entropy)
         modify_letters_in_words(options[:letter_map])
-        @words = options[:number_injector].inject_numbers(@words, @entropy)
+        @words = options[:number_injector].mutate(@words, @entropy)
     end
     def modify_letters_in_words(letter_map)
         @words.map! do |word|
@@ -352,8 +352,7 @@ class NumbersBetweenWordsInjector < BaseNumberInjector
     def initialize(number_count)
         super(number_count)
     end
-    # TODO rename to mutate and unify with the case modifiers
-    def inject_numbers(words, entropy)
+    def mutate(words, entropy)
         @number_count.times do
             offset = entropy.random(words.size).to_i
             random_number_string = make_random_number_string(entropy)
@@ -364,7 +363,7 @@ class NumbersBetweenWordsInjector < BaseNumberInjector
 end
 
 class NumbersInWordsInjectorBase < BaseNumberInjector
-    def inject_numbers(words, entropy)
+    def mutate(words, entropy)
         offsets_to_modify = compute_random_offsets(words.size, @number_count, entropy)
         offsets_to_modify.each do |offset|
             words[offset] = inject_number_in_word(words[offset], make_random_number_string(entropy), entropy)
