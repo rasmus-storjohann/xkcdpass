@@ -17,7 +17,9 @@ require 'set'
 # https://github.com/beala/xkcd-password
 # https://github.com/redacted/XKCD-password-generator
 # https://github.com/thialfihar/xkcd-password-generator
-
+# https://www.schneier.com/blog/archives/2012/09/recent_developm_1.html
+# https://www.schneier.com/essay-246.html
+# http://www.ruby-doc.org/stdlib-1.9.3/libdoc/securerandom/rdoc/SecureRandom.html
 
 def main
     options = parse_command_line_options
@@ -58,6 +60,9 @@ def parse_command_line_options
         opts.on('-d', '--number_count NUMBER', 'How many nunbers in the string') do |number|
             options[:number_count] = number.to_i
         end
+        opts.on('-t', '--stutter NUMBER', 'How many repeated syllabled in the string') do |number|
+            options[:stutter_count] = number.to_i
+        end
         opts.on('-p', '--phrase_count COUNT', 'Number of pass phrases to generate') do |d|
             options[:phrase_count] = d.to_i
         end
@@ -77,6 +82,8 @@ def default_options
         :case_mode => NullModifier.new,
         :number_injector => NumbersBetweenWordsInjector.new,
         :number_count => 0,
+        :stutter_injector => StutterModifier.new,
+        :stutter_count => 0,
         #:letter_map => {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'},
         :letter_map => {},
         :phrase_count => 1,
@@ -104,7 +111,7 @@ def build_case_modifier(mode)
         when :random
             RandomWordCaseModifier.new
         when :alternate
-            AlternateCaseModifier.new(true) # TODO fix this
+            AlternateCaseModifier.new
         else
             raise Exception.new("Unknown case mode #{mode.to_s}")
     end
@@ -151,6 +158,7 @@ class PassPhrase
     def create_pass_phrase(options, wordlist)
         @separator = options[:separator]
         random_words(wordlist, options[:word_count])
+        inject_stutters(options[:stutter_count], options[:stutter_injector])
         mutate(options[:case_mode])
         modify_letters_in_words(options[:letter_map])
         inject_numbers(options[:number_count], options[:number_injector])
@@ -177,7 +185,8 @@ class PassPhrase
         choin_toss = alternate && (@entropy.random(2) == 1)
         choin_toss ? alternate : letter
     end
-    def pick_random_point_in_strinng
+    def inject_stutters(stutter_count, stutter_injector)
+        stutter_injector.inject_stutters(@words, stutter_count, @entropy)
     end
     def inject_numbers(number_count, numbers_injector)
         numbers_injector.inject_numbers(@words, number_count, @entropy)
@@ -199,6 +208,15 @@ class Entropy
     def random(max)
         @complexity += log2(max)
         return (max * rand()).to_i
+    end
+    def pick_n_from_m(n, m)
+        source = (0...m).to_a
+        target = []
+        n.times do
+            offset = random(source.size)
+            target << source.delete_at(offset)
+        end
+        target
     end
 end
 
@@ -277,16 +295,42 @@ class RandomWordCaseModifier
 end
 
 class AlternateCaseModifier
-    def initialize(start_with_upcase)
-        @upcase = start_with_upcase
+    def initialize
+        @upcase = nil
     end
     def mutate(word, entropy)
+        if @upcase.nil?
+            @upcase = entropy.random(2) == 1
+        end
         if @upcase
             @upcase = false
             word.upcase
         else
             @upcase = true
             word.downcase
+        end
+    end
+end
+
+class StutterModifier
+    def inject_stutters(words, stutter_count, entropy)
+    end
+    def split_into_syllables(word)
+        result = []
+        while word.length > 0
+            first_syllable, word = split_off_first_syllable(word)
+            result << first_syllable
+        end
+        result
+    end
+    def split_off_first_syllable(word)
+        case word
+        when /[^A-Za-z]/
+            raise "#{word}: Invalid argument, letters only please"
+        when /^([AEIOUaeiou]+)(.*)/
+            return [$1, $2]
+        when /^([^AEIOUaeiou]+[AEIOUaeiou]+)(.*)/
+            return [$1, $2]
         end
     end
 end

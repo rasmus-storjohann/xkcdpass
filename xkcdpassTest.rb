@@ -107,28 +107,30 @@ class CaseModifierTests < Test::Unit::TestCase
         assert_equal expected, actual
     end
     def test_alternating_case_modifier_alternates_between_lowercase_and_uppercase_start_with_lowercase
-        modifier = AlternateCaseModifier.new(false)
+        entropy = EntropyMockReturnsConstantValue.new(0.1)
+        modifier = AlternateCaseModifier.new
         first_expected = 'this'
         second_expected = 'THIS'
         third_expected = 'this'
 
-        first_actual = modifier.mutate('ThiS', nil)
-        second_actual = modifier.mutate('ThiS', nil)
-        third_actual = modifier.mutate('ThiS', nil)
+        first_actual = modifier.mutate('ThiS', entropy)
+        second_actual = modifier.mutate('ThiS', entropy)
+        third_actual = modifier.mutate('ThiS', entropy)
 
         assert_equal first_expected, first_actual
         assert_equal second_expected, second_actual
         assert_equal third_expected, third_actual
     end
     def test_alternating_case_modifier_alternates_between_lowercase_and_uppercase_start_with_uppercase
-        modifier = AlternateCaseModifier.new(true)
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        modifier = AlternateCaseModifier.new
         first_expected = 'THIS'
         second_expected = 'this'
         third_expected = 'THIS'
 
-        first_actual = modifier.mutate('ThiS', nil)
-        second_actual = modifier.mutate('ThiS', nil)
-        third_actual = modifier.mutate('ThiS', nil)
+        first_actual = modifier.mutate('ThiS', entropy)
+        second_actual = modifier.mutate('ThiS', entropy)
+        third_actual = modifier.mutate('ThiS', entropy)
 
         assert_equal first_expected, first_actual
         assert_equal second_expected, second_actual
@@ -223,9 +225,6 @@ class ModifyLetterTests < Test::Unit::TestCase
     end
 end
 
-class RandomPointInPassphraseTests < Test::Unit::TestCase
-end
-
 class BuildNumberInjectorTests < Test::Unit::TestCase
     def test_build_between_number_injector
         injector = build_number_injector(:between)
@@ -246,6 +245,41 @@ class BuildNumberInjectorTests < Test::Unit::TestCase
         assert_raise(Exception) do
             build_number_injector(:foo)
         end
+    end
+end
+
+class StutterModifierTest < Test::Unit::TestCase
+    def test_syllables_empty_string
+        modifier = StutterModifier.new
+        expected = []
+
+        actual = modifier.split_into_syllables('')
+
+        assert_equal expected, actual
+    end
+    def test_syllables_one_syllable
+        modifier = StutterModifier.new
+        expected = ['foo']
+
+        actual = modifier.split_into_syllables('foo')
+
+        assert_equal expected, actual
+    end
+    def test_syllables_two_syllables
+        modifier = StutterModifier.new
+        expected = ['foo','bla']
+
+        actual = modifier.split_into_syllables('foobla')
+
+        assert_equal expected, actual
+    end
+    def test_syllables_leading_vowels
+        modifier = StutterModifier.new
+        expected = ['ae','foo','bla']
+
+        actual = modifier.split_into_syllables('aefoobla')
+
+        assert_equal expected, actual
     end
 end
 
