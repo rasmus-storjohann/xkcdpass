@@ -56,7 +56,7 @@ class Application
                 options[:case_mode] = build_case_modifier_terminate_on_exception(mode)
             end
             opts.on('-n', '--numbers NUMBERS_MODE', "One of  'between', 'after' or 'inside'") do |mode|
-                options[:number_injector] = build_number_injector_terminate_on_exception(mode)
+                options[:number_injector] = mode.to_sym
             end
             opts.on('-d', '--number_count NUMBER', 'How many nunbers in the string') do |number|
                 options[:number_count] = number.to_i
@@ -72,6 +72,7 @@ class Application
             end
         end
         optionParser.parse!
+        options[:number_injector] = build_number_injector_terminate_on_exception(options[:number_injector], options[:number_count])
         options
     end
 
@@ -81,7 +82,7 @@ class Application
             :word_count => 4,
             :separator => ' ',
             :case_mode => NullModifier.new,
-            :number_injector => NumbersBetweenWordsInjector.new,
+            :number_injector => NumbersBetweenWordsInjector.new(0), # TODO make this a NullModiifer
             :number_count => 0,
             :stutter_injector => StutterModifier.new,
             :stutter_count => 0,
@@ -94,7 +95,7 @@ class Application
 
     def build_case_modifier_terminate_on_exception(mode)
         begin
-            build_case_modifier(mode.to_sym)
+            build_case_modifier(mode)
         rescue Exception => exception
             puts exception.message
             exit
@@ -118,23 +119,24 @@ class Application
         end
     end
 
-    def build_number_injector_terminate_on_exception(mode)
+    def build_number_injector_terminate_on_exception(mode, number_count)
         begin
-            build_number_injector(mode.to_sym)
+            build_number_injector(mode, number_count)
         rescue Exception => exception
             puts exception.message
             exit
         end
     end
 
-    def build_number_injector(mode)
-        case mode.to_sym
+    def build_number_injector(mode, number_count)
+        return mode unless mode.instance_of? Symbol
+        case mode
             when :between
-                NumbersBetweenWordsInjector.new
+                NumbersBetweenWordsInjector.new(number_count)
             when :after
-                NumbersAfterWordsInjector.new
+                NumbersAfterWordsInjector.new(number_count)
             when :inside
-                NumbersInsideWordsInjector.new
+                NumbersInsideWordsInjector.new(number_count)
             else
                 raise Exception.new("Unknown number inject mode #{mode.to_s}")
         end
@@ -163,7 +165,7 @@ class PassPhrase
         inject_stutters(options[:stutter_count], options[:stutter_injector])
         @words = options[:case_mode].mutate(@words, @entropy)
         modify_letters_in_words(options[:letter_map])
-        inject_numbers(options[:number_count], options[:number_injector])
+        @words = options[:number_injector].inject_numbers(@words, @entropy)
     end
     def modify_letters_in_words(letter_map)
         @words.map! do |word|
@@ -184,9 +186,6 @@ class PassPhrase
     end
     def inject_stutters(stutter_count, stutter_injector)
         stutter_injector.inject_stutters(@words, stutter_count, @entropy)
-    end
-    def inject_numbers(number_count, numbers_injector)
-        numbers_injector.inject_numbers(@words, number_count, @entropy)
     end
     def random_words(word_list, number_of_words)
         @words = []
@@ -340,21 +339,22 @@ class StutterModifier
     end
 end
 
-class NullNumbersInjector
-    def inject_numbers(words, number_count, entropy)
-        words
-    end
-end
-
 class BaseNumberInjector
+    def initialize(number_count)
+        @number_count = number_count
+    end
     def make_random_number_string(entropy)
         entropy.random(100).to_s
     end
 end
 
 class NumbersBetweenWordsInjector < BaseNumberInjector
-    def inject_numbers(words, number_count, entropy)
-        number_count.times do
+    def initialize(number_count)
+        super(number_count)
+    end
+    # TODO rename to mutate and unify with the case modifiers
+    def inject_numbers(words, entropy)
+        @number_count.times do
             offset = entropy.random(words.size).to_i
             random_number_string = make_random_number_string(entropy)
             words.insert(offset, random_number_string)
@@ -364,8 +364,8 @@ class NumbersBetweenWordsInjector < BaseNumberInjector
 end
 
 class NumbersInWordsInjectorBase < BaseNumberInjector
-    def inject_numbers(words, number_count, entropy)
-        offsets_to_modify = compute_random_offsets(words.size, number_count, entropy)
+    def inject_numbers(words, entropy)
+        offsets_to_modify = compute_random_offsets(words.size, @number_count, entropy)
         offsets_to_modify.each do |offset|
             words[offset] = inject_number_in_word(words[offset], make_random_number_string(entropy), entropy)
         end

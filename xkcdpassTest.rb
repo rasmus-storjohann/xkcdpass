@@ -267,26 +267,26 @@ end
 class BuildNumberInjectorTests < Test::Unit::TestCase
     def test_build_between_number_injector
         application = Application.new
-        injector = application.build_number_injector(:between)
+        injector = application.build_number_injector(:between, 1)
 
         assert injector.instance_of? NumbersBetweenWordsInjector
     end
     def test_build_after_number_injector
         application = Application.new
-        injector = application.build_number_injector(:after)
+        injector = application.build_number_injector(:after, 1)
 
         assert injector.instance_of? NumbersAfterWordsInjector
     end
     def test_build_inside_number_injector
         application = Application.new
-        injector = application.build_number_injector(:inside)
+        injector = application.build_number_injector(:inside, 1)
 
         assert injector.instance_of? NumbersInsideWordsInjector
     end
     def test_build_undefined_number_injector
         application = Application.new
         assert_raise(Exception) do
-            application.build_number_injector(:foo)
+            application.build_number_injector(:foo, 1)
         end
     end
 end
@@ -328,52 +328,52 @@ end
 
 class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
     def test_insert_zero_numbers
-        injector = NumbersBetweenWordsInjector.new
+        number_count = 0
+        injector = NumbersBetweenWordsInjector.new(number_count)
         expected = ['a','b','c','d','e']
         entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1])
-        number_count = 0
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_count, entropy)
+        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
     def test_insert_two_numbers
-        injector = NumbersBetweenWordsInjector.new
+        number_count = 2
+        injector = NumbersBetweenWordsInjector.new(number_count)
         expected = ['20','40','a','b','c','d','e']
         entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.2, 0.3, 0.4])
-        number_count = 2
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_count, entropy)
+        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
     def test_small_first_random_number_results_in_injection_early_in_the_strinng
-        injector = NumbersBetweenWordsInjector.new
+        number_count = 1
+        injector = NumbersBetweenWordsInjector.new(number_count)
         expected = ['10', 'a','b','c','d','e']
         entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1])
-        number_count = 1
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_count, entropy)
+        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
     def test_large_first_random_number_results_in_injection_late_in_the_strinng
-        injector = NumbersBetweenWordsInjector.new
+        number_count = 1
+        injector = NumbersBetweenWordsInjector.new(number_count)
         expected = ['a','b','c','d','e','10']
         entropy = EntropyMockReturnsValuesFromArray.new([1.0, 0.1])
-        number_count = 1
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_count, entropy)
+        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
     def test_second_random_number_is_injected_in_the_string
-        injector = NumbersBetweenWordsInjector.new
+        number_count = 1
+        injector = NumbersBetweenWordsInjector.new(number_count)
         expected = ['a','b','c','d','e','47']
         entropy = EntropyMockReturnsValuesFromArray.new([1.0, 0.47])
-        number_count = 1
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_count, entropy)
+        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -381,55 +381,55 @@ end
 
 class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
     def test_insert_zero_numbers
-        injector = NumbersAfterWordsInjector.new
-        entropy = EntropyMockReturnsValuesFromArray.new([])
         number_count = 0
+        injector = NumbersAfterWordsInjector.new(number_count)
+        entropy = EntropyMockReturnsValuesFromArray.new([])
         expected = ['a','b','c','d','e']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_count, entropy)
+        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
     def test_insert_two_numbers
-        injector = NumbersAfterWordsInjector.new
-        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.2, 0.3, 0.4])
         number_count = 2
+        injector = NumbersAfterWordsInjector.new(number_count)
+        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.2, 0.3, 0.4])
         expected = ['a30','b40','c','d','e']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_count, entropy)
+        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
     def test_small_first_random_number_results_in_injection_early_in_the_string
-        injector = NumbersAfterWordsInjector.new
-        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1, 0.1])
         number_count = 1
+        injector = NumbersAfterWordsInjector.new(number_count)
+        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1, 0.1])
         expected = ['a10','b','c','d','e']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_count, entropy)
+        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
     def test_large_first_random_number_results_in_injection_late_in_the_string
-        injector = NumbersAfterWordsInjector.new
         number_count = 1
+        injector = NumbersAfterWordsInjector.new(number_count)
         random_number_locations = 0.9
         random_number_values = 0.13
         random_numbers = [random_number_locations, random_number_values].flatten
         entropy = EntropyMockReturnsValuesFromArray.new(random_numbers)
         expected = ['a','b','c','d','e13']
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_count, entropy)
+        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
     def test_second_random_number_is_injected_in_the_strinng
-        injector = NumbersAfterWordsInjector.new
+        number_count = 1
+        injector = NumbersAfterWordsInjector.new(number_count)
         expected = ['a','b','c12','d','e']
         entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.12])
-        number_count = 1
 
-        actual = injector.inject_numbers(['a','b','c','d','e'], number_count, entropy)
+        actual = injector.inject_numbers(['a','b','c','d','e'], entropy)
 
         assert_equal expected, actual
     end
@@ -437,79 +437,79 @@ end
 
 class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
     def test_insert_zero_numbers
-        injector = NumbersInsideWordsInjector.new
-        entropy = EntropyMockReturnsValuesFromArray.new([])
         number_count = 0
+        injector = NumbersInsideWordsInjector.new(number_count)
+        entropy = EntropyMockReturnsValuesFromArray.new([])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_count, entropy)
+        actual = injector.inject_numbers(input, entropy)
 
         assert_equal expected, actual
     end
     def test_insert_two_numbers
-        injector = NumbersInsideWordsInjector.new
-        entropy = EntropyMockReturnsValuesFromArray.new([0.9, 0.8, 0.7, 0.6, 0.5, 0.8])
         number_count = 2
+        injector = NumbersInsideWordsInjector.new(number_count)
+        entropy = EntropyMockReturnsValuesFromArray.new([0.9, 0.8, 0.7, 0.6, 0.5, 0.8])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddd50dd','eeeee70eeee']
 
-        actual = injector.inject_numbers(input, number_count, entropy)
+        actual = injector.inject_numbers(input, entropy)
 
         assert_equal expected, actual
     end
     def test_small_first_random_number_results_in_injection_early_in_the_strinng
-        injector = NumbersInsideWordsInjector.new
-        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1, 0.1, 0.1])
         number_count = 1
+        injector = NumbersInsideWordsInjector.new(number_count)
+        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1, 0.1, 0.1])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['10aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_count, entropy)
+        actual = injector.inject_numbers(input, entropy)
 
         assert_equal expected, actual
     end
     def test_large_first_random_number_results_in_injection_late_in_the_strinng
-        injector = NumbersInsideWordsInjector.new
-        entropy = EntropyMockReturnsValuesFromArray.new([0.9, 0.1, 0.1, 0.1])
         number_count = 1
+        injector = NumbersInsideWordsInjector.new(number_count)
+        entropy = EntropyMockReturnsValuesFromArray.new([0.9, 0.1, 0.1, 0.1])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','10eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_count, entropy)
+        actual = injector.inject_numbers(input, entropy)
 
         assert_equal expected, actual
     end
     def test_second_random_number_is_injected
-        injector = NumbersInsideWordsInjector.new
-        entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.2, 0.1, 0.1])
         number_count = 1
+        injector = NumbersInsideWordsInjector.new(number_count)
+        entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.2, 0.1, 0.1])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','20ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_count, entropy)
+        actual = injector.inject_numbers(input, entropy)
 
         assert_equal expected, actual
     end
     def test_small_third_random_number_results_in_injection_early_in_the_word
-        injector = NumbersInsideWordsInjector.new
-        entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.1, 0.1])
         number_count = 1
+        injector = NumbersInsideWordsInjector.new(number_count)
+        entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.1, 0.1])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','10ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_count, entropy)
+        actual = injector.inject_numbers(input, entropy)
 
         assert_equal expected, actual
     end
     def test_large_third_random_number_results_in_injection_late_in_the_word
-        injector = NumbersInsideWordsInjector.new
-        entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.1, 1.0])
         number_count = 1
+        injector = NumbersInsideWordsInjector.new(number_count)
+        entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.1, 1.0])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc10','ddddddddd','eeeeeeeee']
 
-        actual = injector.inject_numbers(input, number_count, entropy)
+        actual = injector.inject_numbers(input, entropy)
 
         assert_equal expected, actual
     end
@@ -645,8 +645,8 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         application = Application.new
         passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
         options = application.default_options
-        options[:number_injector] = NumbersBetweenWordsInjector.new
-        options[:number_count] = 1
+        number_count = 1
+        options[:number_injector] = NumbersBetweenWordsInjector.new(number_count)
         word_list = ['aa', 'bb', 'cc', 'dd']
         expected = 'dd dd dd 90 dd'
 
@@ -659,8 +659,8 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         application = Application.new
         passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.5))
         options = application.default_options
-        options[:number_injector] = NumbersAfterWordsInjector.new
-        options[:number_count] = 1
+        number_count = 1
+        options[:number_injector] = NumbersAfterWordsInjector.new(number_count)
         word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']
         expected = 'ccccccccc ccccccccc ccccccccc50 ccccccccc'
 
@@ -672,9 +672,9 @@ class CreatePassPhraseTests < Test::Unit::TestCase
     def test_inject_numbers_inside_words
         application = Application.new
         passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.5))
+        number_count = 1
         options = application.default_options
-        options[:number_injector] = NumbersInsideWordsInjector.new
-        options[:number_count] = 1
+        options[:number_injector] = NumbersInsideWordsInjector.new(number_count)
         word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']
         expected = 'ccccccccc ccccccccc cccc50ccccc ccccccccc'
 
