@@ -161,14 +161,9 @@ class PassPhrase
         @separator = options[:separator]
         random_words(wordlist, options[:word_count])
         inject_stutters(options[:stutter_count], options[:stutter_injector])
-        mutate(options[:case_mode])
+        @words = options[:case_mode].mutate(@words, @entropy)
         modify_letters_in_words(options[:letter_map])
         inject_numbers(options[:number_count], options[:number_injector])
-    end
-    def mutate(case_modifier)
-        @words.map! do |word|
-            case_modifier.mutate(word, @entropy)
-        end
     end
     def modify_letters_in_words(letter_map)
         @words.map! do |word|
@@ -258,32 +253,40 @@ def read_dictionary_file(filename)
     words.sort.uniq
 end
 
-class NullModifier
-    def mutate(word, entropy)
-        word
+class WordWiseModifier
+    def mutate(words, entropy)
+        words.map do |word|
+            mutate_word(word, entropy)
+        end
     end
 end
 
-class UpCaseModifier
-    def mutate(word, entropy)
+class NullModifier
+    def mutate(words, entropy)
+        words
+    end
+end
+
+class UpCaseModifier < WordWiseModifier
+    def mutate_word(word, entropy)
         word.upcase
     end
 end
 
-class DownCaseModifier
-    def mutate(word, entropy)
+class DownCaseModifier < WordWiseModifier
+    def mutate_word(word, entropy)
         word.downcase
     end
 end
 
-class CapitalizeCaseModifier
-    def mutate(word, entropy)
+class CapitalizeCaseModifier < WordWiseModifier
+    def mutate_word(word, entropy)
         word.capitalize
     end
 end
 
-class RandomWordCaseModifier
-    def mutate(word, entropy)
+class RandomWordCaseModifier < WordWiseModifier
+    def mutate_word(word, entropy)
         random = entropy.random(3)
         case random
             when 0
@@ -296,11 +299,11 @@ class RandomWordCaseModifier
     end
 end
 
-class AlternateCaseModifier
+class AlternateCaseModifier < WordWiseModifier
     def initialize
         @upcase = nil
     end
-    def mutate(word, entropy)
+    def mutate_word(word, entropy)
         if @upcase.nil?
             @upcase = entropy.random(2) == 1
         end

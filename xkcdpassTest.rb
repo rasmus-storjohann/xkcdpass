@@ -100,7 +100,7 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = UpCaseModifier.new
         expected = 'THIS'
 
-        actual = modifier.mutate('ThiS', nil)
+        actual = modifier.mutate_word('ThiS', nil)
 
         assert_equal expected, actual
     end
@@ -108,7 +108,7 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = DownCaseModifier.new
         expected = 'this'
 
-        actual = modifier.mutate('ThiS', nil)
+        actual = modifier.mutate_word('ThiS', nil)
 
         assert_equal expected, actual
     end
@@ -116,7 +116,7 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = CapitalizeCaseModifier.new
         expected = 'This'
 
-        actual = modifier.mutate('ThiS', nil)
+        actual = modifier.mutate_word('ThiS', nil)
 
         assert_equal expected, actual
     end
@@ -124,7 +124,7 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = RandomWordCaseModifier.new
         expected = 'THIS'
 
-        actual = modifier.mutate('ThiS', EntropyMockReturnsConstantValue.new(0.2))
+        actual = modifier.mutate_word('ThiS', EntropyMockReturnsConstantValue.new(0.2))
 
         assert_equal expected, actual
     end
@@ -132,7 +132,7 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = RandomWordCaseModifier.new
         expected = 'this'
 
-        actual = modifier.mutate('ThiS', EntropyMockReturnsConstantValue.new(0.4))
+        actual = modifier.mutate_word('ThiS', EntropyMockReturnsConstantValue.new(0.4))
 
         assert_equal expected, actual
     end
@@ -140,7 +140,7 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = RandomWordCaseModifier.new
         expected = 'This'
 
-        actual = modifier.mutate('ThiS', EntropyMockReturnsConstantValue.new(0.8))
+        actual = modifier.mutate_word('ThiS', EntropyMockReturnsConstantValue.new(0.8))
 
         assert_equal expected, actual
     end
@@ -151,9 +151,9 @@ class CaseModifierTests < Test::Unit::TestCase
         second_expected = 'THIS'
         third_expected = 'this'
 
-        first_actual = modifier.mutate('ThiS', entropy)
-        second_actual = modifier.mutate('ThiS', entropy)
-        third_actual = modifier.mutate('ThiS', entropy)
+        first_actual = modifier.mutate_word('ThiS', entropy)
+        second_actual = modifier.mutate_word('ThiS', entropy)
+        third_actual = modifier.mutate_word('ThiS', entropy)
 
         assert_equal first_expected, first_actual
         assert_equal second_expected, second_actual
@@ -166,9 +166,9 @@ class CaseModifierTests < Test::Unit::TestCase
         second_expected = 'this'
         third_expected = 'THIS'
 
-        first_actual = modifier.mutate('ThiS', entropy)
-        second_actual = modifier.mutate('ThiS', entropy)
-        third_actual = modifier.mutate('ThiS', entropy)
+        first_actual = modifier.mutate_word('ThiS', entropy)
+        second_actual = modifier.mutate_word('ThiS', entropy)
+        third_actual = modifier.mutate_word('ThiS', entropy)
 
         assert_equal first_expected, first_actual
         assert_equal second_expected, second_actual
@@ -178,9 +178,10 @@ class CaseModifierTests < Test::Unit::TestCase
         words = ['this', 'THAT']
         passphrase = PassPhrase.new
         passphrase.words = words
+        modifier = CapitalizeCaseModifier.new
         expected = ['This', 'That']
         
-        actual = passphrase.mutate(CapitalizeCaseModifier.new)
+        actual = modifier.mutate(words, nil)
 
         assert_equal expected, actual
     end
