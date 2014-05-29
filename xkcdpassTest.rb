@@ -58,33 +58,39 @@ end
 
 class BuildCaseModifierTests < Test::Unit::TestCase
     def test_build_uppercase_modifier
-        modifier = build_case_modifier(:upper)
+        application = Application.new
+        modifier = application.build_case_modifier(:upper)
 
         assert modifier.instance_of? UpCaseModifier
     end
     def test_build_lowercase_modifier
-        modifier = build_case_modifier(:lower)
+        application = Application.new
+        modifier = application.build_case_modifier(:lower)
 
         assert modifier.instance_of? DownCaseModifier
     end
     def test_build_capitalize_modifier
-        modifier = build_case_modifier(:capitalize)
+        application = Application.new
+        modifier = application.build_case_modifier(:capitalize)
 
         assert modifier.instance_of? CapitalizeCaseModifier
     end
     def test_build_random_modifier
-        modifier = build_case_modifier(:random)
+        application = Application.new
+        modifier = application.build_case_modifier(:random)
 
         assert modifier.instance_of? RandomWordCaseModifier
     end
     def test_build_alternate_modifier
-        modifier = build_case_modifier(:alternate)
+        application = Application.new
+        modifier = application.build_case_modifier(:alternate)
 
         assert modifier.instance_of? AlternateCaseModifier
     end
     def test_build_undefined_modifier
+        application = Application.new
         assert_raise(Exception) do
-            modifier = build_case_modifier(:foo)
+            modifier = application.build_case_modifier(:foo)
         end
     end
 end
@@ -259,23 +265,27 @@ end
 
 class BuildNumberInjectorTests < Test::Unit::TestCase
     def test_build_between_number_injector
-        injector = build_number_injector(:between)
+        application = Application.new
+        injector = application.build_number_injector(:between)
 
         assert injector.instance_of? NumbersBetweenWordsInjector
     end
     def test_build_after_number_injector
-        injector = build_number_injector(:after)
+        application = Application.new
+        injector = application.build_number_injector(:after)
 
         assert injector.instance_of? NumbersAfterWordsInjector
     end
     def test_build_inside_number_injector
-        injector = build_number_injector(:inside)
+        application = Application.new
+        injector = application.build_number_injector(:inside)
 
         assert injector.instance_of? NumbersInsideWordsInjector
     end
     def test_build_undefined_number_injector
+        application = Application.new
         assert_raise(Exception) do
-            build_number_injector(:foo)
+            application.build_number_injector(:foo)
         end
     end
 end
@@ -506,7 +516,8 @@ end
 
 class ComputedComplexityTests < Test::Unit::TestCase
     def test_zero_length_string
-        options = default_options
+        application = Application.new
+        options = application.default_options
         options[:word_count] = 0
         wordlist = []
         expected = 0.0
@@ -518,7 +529,8 @@ class ComputedComplexityTests < Test::Unit::TestCase
         assert_equal expected, actual
     end
     def test_one_word_in_word_list
-        options = default_options
+        application = Application.new
+        options = application.default_options
         options[:word_count] = 1
         wordlist = ['a']
         expected = 0.0
@@ -530,7 +542,8 @@ class ComputedComplexityTests < Test::Unit::TestCase
         assert_equal expected, actual
     end
     def test_random_case_modifier
-        options = default_options
+        application = Application.new
+        options = application.default_options
         options[:word_count] = 1
         options[:case_mode] = RandomWordCaseModifier.new
         wordlist = ['a']
@@ -603,8 +616,9 @@ end
 
 class CreatePassPhraseTests < Test::Unit::TestCase
     def test_default_options
+        application = Application.new
         passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
-        options = default_options
+        options = application.default_options
         word_list = ['aa', 'bb', 'cc', 'dd']
         expected = 'dd dd dd dd'
         
@@ -614,8 +628,9 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         assert_equal expected, actual        
     end
     def test_non_default_sepatator_character
+        application = Application.new
         passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
-        options = default_options
+        options = application.default_options
         options[:separator] = '-'
         word_list = ['aa', 'bb', 'cc', 'dd']
         expected = 'dd-dd-dd-dd'
@@ -626,8 +641,9 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         assert_equal expected, actual        
     end
     def test_inject_numbers_between_words
+        application = Application.new
         passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
-        options = default_options
+        options = application.default_options
         options[:number_injector] = NumbersBetweenWordsInjector.new
         options[:number_count] = 1
         word_list = ['aa', 'bb', 'cc', 'dd']
@@ -639,8 +655,9 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         assert_equal expected, actual        
     end
     def test_inject_numbers_after_words
+        application = Application.new
         passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.5))
-        options = default_options
+        options = application.default_options
         options[:number_injector] = NumbersAfterWordsInjector.new
         options[:number_count] = 1
         word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']
@@ -652,8 +669,9 @@ class CreatePassPhraseTests < Test::Unit::TestCase
         assert_equal expected, actual        
     end
     def test_inject_numbers_inside_words
+        application = Application.new
         passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.5))
-        options = default_options
+        options = application.default_options
         options[:number_injector] = NumbersInsideWordsInjector.new
         options[:number_count] = 1
         word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']

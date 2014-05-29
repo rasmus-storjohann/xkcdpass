@@ -21,121 +21,123 @@ require 'set'
 # https://www.schneier.com/essay-246.html
 # http://www.ruby-doc.org/stdlib-1.9.3/libdoc/securerandom/rdoc/SecureRandom.html
 
-def main
-    options = parse_command_line_options
-    wordlist = read_dictionary_file(options[:file])
-    options[:phrase_count].times do
-        phrase = PassPhrase.new
-        phrase.create_pass_phrase(options, wordlist)
-        if options[:verbose]
-            puts "[#{phrase.complexity.to_i}, #{HaystackBruteForceComplexity.new.compute(phrase.to_s)}]: #{phrase}"
-        else
-            puts phrase
+class Application
+    def main
+        options = parse_command_line_options
+        wordlist = read_dictionary_file(options[:file])
+        options[:phrase_count].times do
+            phrase = PassPhrase.new
+            phrase.create_pass_phrase(options, wordlist)
+            if options[:verbose]
+                puts "[#{phrase.complexity.to_i}, #{HaystackBruteForceComplexity.new.compute(phrase.to_s)}]: #{phrase}"
+            else
+                puts phrase
+            end
         end
     end
-end
 
-def parse_command_line_options
-    options = default_options
-    optionParser = OptionParser.new do|opts|
-        opts.on('-h', '--help', 'Display this screen' ) do
-            puts opts
+    def parse_command_line_options
+        options = default_options
+        optionParser = OptionParser.new do|opts|
+            opts.on('-h', '--help', 'Display this screen' ) do
+                puts opts
+                exit
+            end
+            opts.on('-f', '--file FILE', 'Dictionary file to use') do |file|
+                options[:file] = file
+            end
+            opts.on('-w', '--word_count COUNT', 'Number of words') do |count|
+                options[:word_count] = count.to_i
+            end
+            opts.on('-s', '--separator STRING', 'String used to separate words') do |separator|
+                options[:separator] = separator
+            end
+            opts.on('-c', '--case CASE_MODE', "One of  'upper', 'lower', 'capitalize', 'alternate' or 'random'") do |mode|
+                options[:case_mode] = build_case_modifier_terminate_on_exception(mode)
+            end
+            opts.on('-n', '--numbers NUMBERS_MODE', "One of  'between', 'after' or 'inside'") do |mode|
+                options[:number_injector] = build_number_injector_terminate_on_exception(mode)
+            end
+            opts.on('-d', '--number_count NUMBER', 'How many nunbers in the string') do |number|
+                options[:number_count] = number.to_i
+            end
+            opts.on('-t', '--stutter NUMBER', 'How many repeated syllabled in the string') do |number|
+                options[:stutter_count] = number.to_i
+            end
+            opts.on('-p', '--phrase_count COUNT', 'Number of pass phrases to generate') do |d|
+                options[:phrase_count] = d.to_i
+            end
+            opts.on('-v', '--verbose', 'Show complexity of the password') do
+                options[:verbose] = true
+            end
+        end
+        optionParser.parse!
+        options
+    end
+
+    def default_options
+        {
+            :file => '/usr/share/dict/words',
+            :word_count => 4,
+            :separator => ' ',
+            :case_mode => NullModifier.new,
+            :number_injector => NumbersBetweenWordsInjector.new,
+            :number_count => 0,
+            :stutter_injector => StutterModifier.new,
+            :stutter_count => 0,
+            #:letter_map => {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'},
+            :letter_map => {},
+            :phrase_count => 1,
+            :verbose => false
+        }
+    end
+
+    def build_case_modifier_terminate_on_exception(mode)
+        begin
+            build_case_modifier(mode.to_sym)
+        rescue Exception => exception
+            puts exception.message
             exit
         end
-        opts.on('-f', '--file FILE', 'Dictionary file to use') do |file|
-            options[:file] = file
-        end
-        opts.on('-w', '--word_count COUNT', 'Number of words') do |count|
-            options[:word_count] = count.to_i
-        end
-        opts.on('-s', '--separator STRING', 'String used to separate words') do |separator|
-            options[:separator] = separator
-        end
-        opts.on('-c', '--case CASE_MODE', "One of  'upper', 'lower', 'capitalize', 'alternate' or 'random'") do |mode|
-            options[:case_mode] = build_case_modifier_terminate_on_exception(mode)
-        end
-        opts.on('-n', '--numbers NUMBERS_MODE', "One of  'between', 'after' or 'inside'") do |mode|
-            options[:number_injector] = build_number_injector_terminate_on_exception(mode)
-        end
-        opts.on('-d', '--number_count NUMBER', 'How many nunbers in the string') do |number|
-            options[:number_count] = number.to_i
-        end
-        opts.on('-t', '--stutter NUMBER', 'How many repeated syllabled in the string') do |number|
-            options[:stutter_count] = number.to_i
-        end
-        opts.on('-p', '--phrase_count COUNT', 'Number of pass phrases to generate') do |d|
-            options[:phrase_count] = d.to_i
-        end
-        opts.on('-v', '--verbose', 'Show complexity of the password') do
-            options[:verbose] = true
+    end
+
+    def build_case_modifier(mode)
+        case mode.to_sym
+            when :upper
+                UpCaseModifier.new
+            when :lower
+                DownCaseModifier.new
+            when :capitalize
+                CapitalizeCaseModifier.new
+            when :random
+                RandomWordCaseModifier.new
+            when :alternate
+                AlternateCaseModifier.new
+            else
+                raise Exception.new("Unknown case mode #{mode.to_s}")
         end
     end
-    optionParser.parse!
-    options
-end
 
-def default_options
-    {
-        :file => '/usr/share/dict/words',
-        :word_count => 4,
-        :separator => ' ',
-        :case_mode => NullModifier.new,
-        :number_injector => NumbersBetweenWordsInjector.new,
-        :number_count => 0,
-        :stutter_injector => StutterModifier.new,
-        :stutter_count => 0,
-        #:letter_map => {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'},
-        :letter_map => {},
-        :phrase_count => 1,
-        :verbose => false
-    }
-end
-
-def build_case_modifier_terminate_on_exception(mode)
-    begin
-        build_case_modifier(mode.to_sym)
-    rescue Exception => exception
-        puts exception.message
-        exit
+    def build_number_injector_terminate_on_exception(mode)
+        begin
+            build_number_injector(mode.to_sym)
+        rescue Exception => exception
+            puts exception.message
+            exit
+        end
     end
-end
 
-def build_case_modifier(mode)
-    case mode.to_sym
-        when :upper
-            UpCaseModifier.new
-        when :lower
-            DownCaseModifier.new
-        when :capitalize
-            CapitalizeCaseModifier.new
-        when :random
-            RandomWordCaseModifier.new
-        when :alternate
-            AlternateCaseModifier.new
-        else
-            raise Exception.new("Unknown case mode #{mode.to_s}")
-    end
-end
-
-def build_number_injector_terminate_on_exception(mode)
-    begin
-        build_number_injector(mode.to_sym)
-    rescue Exception => exception
-        puts exception.message
-        exit
-    end
-end
-
-def build_number_injector(mode)
-    case mode.to_sym
-        when :between
-            NumbersBetweenWordsInjector.new
-        when :after
-            NumbersAfterWordsInjector.new
-        when :inside
-            NumbersInsideWordsInjector.new
-        else
-            raise Exception.new("Unknown number inject mode #{mode.to_s}")
+    def build_number_injector(mode)
+        case mode.to_sym
+            when :between
+                NumbersBetweenWordsInjector.new
+            when :after
+                NumbersAfterWordsInjector.new
+            when :inside
+                NumbersInsideWordsInjector.new
+            else
+                raise Exception.new("Unknown number inject mode #{mode.to_s}")
+        end
     end
 end
 
@@ -395,4 +397,4 @@ class NumbersInsideWordsInjector < NumbersInWordsInjectorBase
     end
 end
 
-main
+Application.new.main
