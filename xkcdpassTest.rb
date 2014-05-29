@@ -24,6 +24,38 @@ class EntropyMockReturnsValuesFromArray
     end
 end
 
+class EntropyTests < Test::Unit::TestCase
+    def pick_zero_random_value_from_range
+        max_range = 6
+        expected = []
+
+        actual = pick_n_from_m(0, max_range)
+
+        assert_equal expected, actual
+    end
+    def pick_one_random_value_from_range
+        max_range = 6
+
+        actual = pick_n_from_m(1, max_range)
+
+        assert actual.size == 1
+        assert actual[0] > -1
+        assert actual[0] < max_range
+    end
+    def pick_two_random_value_from_range
+        max_range = 6
+
+        actual = pick_n_from_m(2, max_range)
+
+        assert actual.size == 2
+        assert actual[0] > -1
+        assert actual[0] < max_range
+        assert actual[1] > -1
+        assert actual[1] < max_range
+        assert actual[0] < actual[1]
+    end
+end
+
 class BuildCaseModifierTests < Test::Unit::TestCase
     def test_build_uppercase_modifier
         modifier = build_case_modifier(:upper)

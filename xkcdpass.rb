@@ -216,7 +216,7 @@ class Entropy
             offset = random(source.size)
             target << source.delete_at(offset)
         end
-        target
+        target.sort
     end
 end
 
@@ -342,13 +342,6 @@ class NullNumbersInjector
 end
 
 class BaseNumberInjector
-    def hom_many_numbers_to_inject(word_count, number_count, entropy)
-        # expectation_value = word_count * number_count
-        # entropy.random(2 * expectation_value)
-        jitter_with_average_of_one = entropy.random(2) # TODO this is dodgy, really a random float, which is against intention
-        hom_many = word_count * number_count * jitter_with_average_of_one
-        hom_many.to_i
-    end
     def make_random_number_string(entropy)
         entropy.random(100).to_s
     end
