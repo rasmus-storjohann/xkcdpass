@@ -4,7 +4,7 @@ require 'test/unit'
 require 'test/unit/assertions.rb'
 require 'xkcdpass.rb'
 
-class EntropyMockBase
+class RandomSourceMockBase
     def pick_n_from_m(n, m)
         source = (0...m).to_a
         target = []
@@ -16,7 +16,7 @@ class EntropyMockBase
     end
 end
 
-class EntropyMockReturnsConstantValue < EntropyMockBase
+class RandomSourceMockReturnsConstantValue < RandomSourceMockBase
     def initialize(mock_random_value)
         raise 'random must be less than one' if mock_random_value > 1
         raise 'random must be greater than zero' if mock_random_value < 0
@@ -27,7 +27,7 @@ class EntropyMockReturnsConstantValue < EntropyMockBase
     end
 end
 
-class EntropyMockReturnsValuesFromArray < EntropyMockBase
+class RandomSourceMockReturnsValuesFromArray < RandomSourceMockBase
     def initialize(data)
         @data = data
     end
@@ -36,7 +36,7 @@ class EntropyMockReturnsValuesFromArray < EntropyMockBase
     end
 end
 
-class EntropyTests < Test::Unit::TestCase
+class RandomNumberGeneratorTests < Test::Unit::TestCase
     def pick_zero_random_value_from_range
         max_range = 6
         expected = []
@@ -148,7 +148,7 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = RandomWordCaseModifier.new
         expected = 'THIS'
 
-        actual = modifier.mutate_word('ThiS', EntropyMockReturnsConstantValue.new(0.2))
+        actual = modifier.mutate_word('ThiS', RandomSourceMockReturnsConstantValue.new(0.2))
 
         assert_equal expected, actual
     end
@@ -156,7 +156,7 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = RandomWordCaseModifier.new
         expected = 'this'
 
-        actual = modifier.mutate_word('ThiS', EntropyMockReturnsConstantValue.new(0.4))
+        actual = modifier.mutate_word('ThiS', RandomSourceMockReturnsConstantValue.new(0.4))
 
         assert_equal expected, actual
     end
@@ -164,35 +164,35 @@ class CaseModifierTests < Test::Unit::TestCase
         modifier = RandomWordCaseModifier.new
         expected = 'This'
 
-        actual = modifier.mutate_word('ThiS', EntropyMockReturnsConstantValue.new(0.8))
+        actual = modifier.mutate_word('ThiS', RandomSourceMockReturnsConstantValue.new(0.8))
 
         assert_equal expected, actual
     end
     def test_alternating_case_modifier_alternates_between_lowercase_and_uppercase_start_with_lowercase
-        entropy = EntropyMockReturnsConstantValue.new(0.1)
+        random_source = RandomSourceMockReturnsConstantValue.new(0.1)
         modifier = AlternateCaseModifier.new
         first_expected = 'this'
         second_expected = 'THIS'
         third_expected = 'this'
 
-        first_actual = modifier.mutate_word('ThiS', entropy)
-        second_actual = modifier.mutate_word('ThiS', entropy)
-        third_actual = modifier.mutate_word('ThiS', entropy)
+        first_actual = modifier.mutate_word('ThiS', random_source)
+        second_actual = modifier.mutate_word('ThiS', random_source)
+        third_actual = modifier.mutate_word('ThiS', random_source)
 
         assert_equal first_expected, first_actual
         assert_equal second_expected, second_actual
         assert_equal third_expected, third_actual
     end
     def test_alternating_case_modifier_alternates_between_lowercase_and_uppercase_start_with_uppercase
-        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        random_source = RandomSourceMockReturnsConstantValue.new(0.9)
         modifier = AlternateCaseModifier.new
         first_expected = 'THIS'
         second_expected = 'this'
         third_expected = 'THIS'
 
-        first_actual = modifier.mutate_word('ThiS', entropy)
-        second_actual = modifier.mutate_word('ThiS', entropy)
-        third_actual = modifier.mutate_word('ThiS', entropy)
+        first_actual = modifier.mutate_word('ThiS', random_source)
+        second_actual = modifier.mutate_word('ThiS', random_source)
+        third_actual = modifier.mutate_word('ThiS', random_source)
 
         assert_equal first_expected, first_actual
         assert_equal second_expected, second_actual
@@ -213,93 +213,93 @@ end
 
 class ModifyLetterTests < Test::Unit::TestCase
     def test_modify_one_letter_replaces_matching_letters
-        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        random_source = RandomSourceMockReturnsConstantValue.new(0.9)
         modifier = LetterModifier.new({}, 0)
         expected = '%'
 
-        actual = modifier.modify_one_letter('i', {'i'=>'%'}, entropy)
+        actual = modifier.modify_one_letter('i', {'i'=>'%'}, random_source)
 
         assert_equal expected, actual
     end
     def test_modify_one_letter_with_negative_cointoss_does_not_replace_matching_letters
-        entropy = EntropyMockReturnsConstantValue.new(0.1)
+        random_source = RandomSourceMockReturnsConstantValue.new(0.1)
         modifier = LetterModifier.new({}, 0)
         expected = 'i'
 
-        actual = modifier.modify_one_letter('i', {'i'=>'%'}, entropy)
+        actual = modifier.modify_one_letter('i', {'i'=>'%'}, random_source)
 
         assert_equal expected, actual
     end
     def test_modify_one_letter_returns_nonmatching_letters_unchanged
-        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        random_source = RandomSourceMockReturnsConstantValue.new(0.9)
         modifier = LetterModifier.new({}, 0)
         expected = 't'
 
-        actual = modifier.modify_one_letter('t', {'i'=>'%'}, entropy)
+        actual = modifier.modify_one_letter('t', {'i'=>'%'}, random_source)
 
         assert_equal expected, actual
     end
     def test_modify_letters_with_with_positive_cointoss_replaces_matching_letters
-        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        random_source = RandomSourceMockReturnsConstantValue.new(0.9)
         modifier = LetterModifier.new({}, 0)
         expected = 'Th%s %s'
 
-        actual = modifier.modify_letters('This Is', {'i'=>'%'}, entropy)
+        actual = modifier.modify_letters('This Is', {'i'=>'%'}, random_source)
 
         assert_equal expected, actual
     end
     def test_modify_letters_with_with_negative_cointoss_does_not_replace_letters
-        entropy = EntropyMockReturnsConstantValue.new(0.1)
+        random_source = RandomSourceMockReturnsConstantValue.new(0.1)
         modifier = LetterModifier.new({}, 0)
         expected = 'This Is'
 
-        actual = modifier.modify_letters('This Is', {'i'=>'%'}, entropy)
+        actual = modifier.modify_letters('This Is', {'i'=>'%'}, random_source)
 
         assert_equal expected, actual
     end
     def test_modify_letters_in_one_word_only
-        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        random_source = RandomSourceMockReturnsConstantValue.new(0.9)
         letter_map = {'a' => '@'}
         number_of_words_to_modify = 1
         modifier = LetterModifier.new(letter_map, number_of_words_to_modify)
         words    = ['This', 'That', 'ThAt']
         expected = ['This', 'That', 'Th@t']
         
-        actual = modifier.mutate(words, entropy)
+        actual = modifier.mutate(words, random_source)
         
         assert_equal expected, actual
     end
     def test_modify_letters_in_all_three_word_only
-        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        random_source = RandomSourceMockReturnsConstantValue.new(0.9)
         letter_map = {'a' => '@'}
         number_of_words_to_modify = 3
         modifier = LetterModifier.new(letter_map, number_of_words_to_modify)
         words    = ['This', 'That', 'ThAt']
         expected = ['This', 'Th@t', 'Th@t']
         
-        actual = modifier.mutate(words, entropy)
+        actual = modifier.mutate(words, random_source)
         
         assert_equal expected, actual
     end
     def test_modify_letters_with_large_random_value
-        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        random_source = RandomSourceMockReturnsConstantValue.new(0.9)
         letter_map = {'a' => '@'}
         modifier = LetterModifier.new(letter_map, 0)
         word = 'ThatAt'
         expected = 'Th@t@t'
 
-        actual = modifier.modify_letters(word, letter_map, entropy)
+        actual = modifier.modify_letters(word, letter_map, random_source)
 
         assert_equal expected, actual
     end
     def test_modify_letters_with_small_random_value_the_letter_is_not_altered
-        entropy = EntropyMockReturnsConstantValue.new(0.1)
+        random_source = RandomSourceMockReturnsConstantValue.new(0.1)
         letter_map = {'a' => '@'}
         modifier = LetterModifier.new(letter_map, 0)
         word = 'ThatAt'
         expected = 'ThatAt'
 
-        actual = modifier.modify_letters(word, letter_map, entropy)
+        actual = modifier.modify_letters(word, letter_map, random_source)
 
         assert_equal expected, actual
     end
@@ -372,9 +372,9 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
         number_count = 0
         injector = NumbersBetweenWordsInjector.new(number_count)
         expected = ['a','b','c','d','e']
-        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.1, 0.1])
 
-        actual = injector.mutate(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], random_source)
 
         assert_equal expected, actual
     end
@@ -382,9 +382,9 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
         number_count = 2
         injector = NumbersBetweenWordsInjector.new(number_count)
         expected = ['20','40','a','b','c','d','e']
-        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.2, 0.3, 0.4])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.1, 0.2, 0.3, 0.4])
 
-        actual = injector.mutate(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], random_source)
 
         assert_equal expected, actual
     end
@@ -392,9 +392,9 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
         number_count = 1
         injector = NumbersBetweenWordsInjector.new(number_count)
         expected = ['10', 'a','b','c','d','e']
-        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.1, 0.1])
 
-        actual = injector.mutate(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], random_source)
 
         assert_equal expected, actual
     end
@@ -402,9 +402,9 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
         number_count = 1
         injector = NumbersBetweenWordsInjector.new(number_count)
         expected = ['a','b','c','d','e','10']
-        entropy = EntropyMockReturnsValuesFromArray.new([1.0, 0.1])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([1.0, 0.1])
 
-        actual = injector.mutate(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], random_source)
 
         assert_equal expected, actual
     end
@@ -412,9 +412,9 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
         number_count = 1
         injector = NumbersBetweenWordsInjector.new(number_count)
         expected = ['a','b','c','d','e','47']
-        entropy = EntropyMockReturnsValuesFromArray.new([1.0, 0.47])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([1.0, 0.47])
 
-        actual = injector.mutate(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], random_source)
 
         assert_equal expected, actual
     end
@@ -424,30 +424,30 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
     def test_insert_zero_numbers
         number_count = 0
         injector = NumbersAfterWordsInjector.new(number_count)
-        entropy = EntropyMockReturnsValuesFromArray.new([])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([])
         expected = ['a','b','c','d','e']
 
-        actual = injector.mutate(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], random_source)
 
         assert_equal expected, actual
     end
     def test_insert_two_numbers
         number_count = 2
         injector = NumbersAfterWordsInjector.new(number_count)
-        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.2, 0.3, 0.4])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.1, 0.2, 0.3, 0.4])
         expected = ['a30','b40','c','d','e']
 
-        actual = injector.mutate(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], random_source)
 
         assert_equal expected, actual
     end
     def test_small_first_random_number_results_in_injection_early_in_the_string
         number_count = 1
         injector = NumbersAfterWordsInjector.new(number_count)
-        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1, 0.1])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.1, 0.1, 0.1])
         expected = ['a10','b','c','d','e']
 
-        actual = injector.mutate(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], random_source)
 
         assert_equal expected, actual
     end
@@ -457,10 +457,10 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
         random_number_locations = 0.9
         random_number_values = 0.13
         random_numbers = [random_number_locations, random_number_values].flatten
-        entropy = EntropyMockReturnsValuesFromArray.new(random_numbers)
+        random_source = RandomSourceMockReturnsValuesFromArray.new(random_numbers)
         expected = ['a','b','c','d','e13']
 
-        actual = injector.mutate(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], random_source)
 
         assert_equal expected, actual
     end
@@ -468,9 +468,9 @@ class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
         number_count = 1
         injector = NumbersAfterWordsInjector.new(number_count)
         expected = ['a','b','c12','d','e']
-        entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.12])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.5, 0.12])
 
-        actual = injector.mutate(['a','b','c','d','e'], entropy)
+        actual = injector.mutate(['a','b','c','d','e'], random_source)
 
         assert_equal expected, actual
     end
@@ -480,77 +480,77 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
     def test_insert_zero_numbers
         number_count = 0
         injector = NumbersInsideWordsInjector.new(number_count)
-        entropy = EntropyMockReturnsValuesFromArray.new([])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.mutate(input, entropy)
+        actual = injector.mutate(input, random_source)
 
         assert_equal expected, actual
     end
     def test_insert_two_numbers
         number_count = 2
         injector = NumbersInsideWordsInjector.new(number_count)
-        entropy = EntropyMockReturnsValuesFromArray.new([0.9, 0.8, 0.7, 0.6, 0.5, 0.8])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.9, 0.8, 0.7, 0.6, 0.5, 0.8])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddd70dddd','eeeeeee50ee']
 
-        actual = injector.mutate(input, entropy)
+        actual = injector.mutate(input, random_source)
 
         assert_equal expected, actual
     end
     def test_small_first_random_number_results_in_injection_early_in_the_strinng
         number_count = 1
         injector = NumbersInsideWordsInjector.new(number_count)
-        entropy = EntropyMockReturnsValuesFromArray.new([0.1, 0.1, 0.1, 0.1])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.1, 0.1, 0.1, 0.1])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['10aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.mutate(input, entropy)
+        actual = injector.mutate(input, random_source)
 
         assert_equal expected, actual
     end
     def test_large_first_random_number_results_in_injection_late_in_the_strinng
         number_count = 1
         injector = NumbersInsideWordsInjector.new(number_count)
-        entropy = EntropyMockReturnsValuesFromArray.new([0.9, 0.1, 0.1, 0.1])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.9, 0.1, 0.1, 0.1])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','10eeeeeeeee']
 
-        actual = injector.mutate(input, entropy)
+        actual = injector.mutate(input, random_source)
 
         assert_equal expected, actual
     end
     def test_second_random_number_is_injected
         number_count = 1
         injector = NumbersInsideWordsInjector.new(number_count)
-        entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.2, 0.1, 0.1])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.5, 0.2, 0.1, 0.1])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','20ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.mutate(input, entropy)
+        actual = injector.mutate(input, random_source)
 
         assert_equal expected, actual
     end
     def test_small_third_random_number_results_in_injection_early_in_the_word
         number_count = 1
         injector = NumbersInsideWordsInjector.new(number_count)
-        entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.1, 0.1])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.5, 0.1, 0.1])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','10ccccccccc','ddddddddd','eeeeeeeee']
 
-        actual = injector.mutate(input, entropy)
+        actual = injector.mutate(input, random_source)
 
         assert_equal expected, actual
     end
     def test_large_third_random_number_results_in_injection_late_in_the_word
         number_count = 1
         injector = NumbersInsideWordsInjector.new(number_count)
-        entropy = EntropyMockReturnsValuesFromArray.new([0.5, 0.1, 1.0])
+        random_source = RandomSourceMockReturnsValuesFromArray.new([0.5, 0.1, 1.0])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
         expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc10','ddddddddd','eeeeeeeee']
 
-        actual = injector.mutate(input, entropy)
+        actual = injector.mutate(input, random_source)
 
         assert_equal expected, actual
     end
@@ -566,7 +566,7 @@ class ComputedComplexityTests < Test::Unit::TestCase
         
         phrase = PassPhrase.new
         phrase.create_pass_phrase(options, wordlist)
-        actual = phrase.complexity
+        actual = phrase.entropy
 
         assert_equal expected, actual
     end
@@ -579,7 +579,7 @@ class ComputedComplexityTests < Test::Unit::TestCase
         
         phrase = PassPhrase.new
         phrase.create_pass_phrase(options, wordlist)
-        actual = phrase.complexity
+        actual = phrase.entropy
 
         assert_equal expected, actual
     end
@@ -593,7 +593,7 @@ class ComputedComplexityTests < Test::Unit::TestCase
         
         phrase = PassPhrase.new
         phrase.create_pass_phrase(options, wordlist)
-        actual = phrase.complexity
+        actual = phrase.entropy
 
         assert_equal expected, actual
     end
@@ -659,7 +659,7 @@ end
 class CreatePassPhraseTests < Test::Unit::TestCase
     def test_default_options
         application = Application.new
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
+        passphrase = PassPhrase.new(RandomSourceMockReturnsConstantValue.new(0.9))
         options = application.default_options
         word_list = ['aa', 'bb', 'cc', 'dd']
         expected = 'dd dd dd dd'
@@ -671,7 +671,7 @@ class CreatePassPhraseTests < Test::Unit::TestCase
     end
     def test_non_default_sepatator_character
         application = Application.new
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
+        passphrase = PassPhrase.new(RandomSourceMockReturnsConstantValue.new(0.9))
         options = application.default_options
         options[:separator] = '-'
         word_list = ['aa', 'bb', 'cc', 'dd']
@@ -684,7 +684,7 @@ class CreatePassPhraseTests < Test::Unit::TestCase
     end
     def test_inject_numbers_between_words
         application = Application.new
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
+        passphrase = PassPhrase.new(RandomSourceMockReturnsConstantValue.new(0.9))
         options = application.default_options
         number_count = 1
         options[:number_injector] = NumbersBetweenWordsInjector.new(number_count)
@@ -698,7 +698,7 @@ class CreatePassPhraseTests < Test::Unit::TestCase
     end
     def test_inject_numbers_after_words
         application = Application.new
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.5))
+        passphrase = PassPhrase.new(RandomSourceMockReturnsConstantValue.new(0.5))
         options = application.default_options
         number_count = 1
         options[:number_injector] = NumbersAfterWordsInjector.new(number_count)
@@ -712,7 +712,7 @@ class CreatePassPhraseTests < Test::Unit::TestCase
     end
     def test_inject_numbers_inside_words
         application = Application.new
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.5))
+        passphrase = PassPhrase.new(RandomSourceMockReturnsConstantValue.new(0.5))
         options = application.default_options
         number_count = 1
         options[:number_injector] = NumbersInsideWordsInjector.new(number_count)
@@ -791,7 +791,7 @@ class IntegrationTests < Test::Unit::TestCase
         assert_match expected, actual
     end
     def test_case_capitalize
-        expected = /^([A-Z][a-z]+ ){4}$/
+        expected = /^([A-Z][a-z]* ){4}$/
 
         actual = `./xkcdpass.rb -f sample_dict.txt -c capitalize`.strip + ' '
 
