@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 
 require 'optparse'
-require 'set'
+
 
 # Plan: 
  
@@ -18,18 +18,22 @@ require 'set'
 # https://github.com/redacted/XKCD-password-generator
 # https://github.com/thialfihar/xkcd-password-generator
 # https://www.schneier.com/blog/archives/2012/09/recent_developm_1.html
-# https://www.schneier.com/essay-246.html
+# https://www.schneier.com/essay-246.htm
 # http://www.ruby-doc.org/stdlib-1.9.3/libdoc/securerandom/rdoc/SecureRandom.html
+# https://www.grc.com/haystack.htm
 
 class Application
     def main
         options = parse_command_line_options
         wordlist = read_dictionary_file(options[:file])
+        if options[:verbose]
+            puts "wordlist contains #{wordlist.size} words, giving #{log2(wordlist.size)} bits per word"
+        end
         options[:phrase_count].times do
             phrase = PassPhrase.new
             phrase.create_pass_phrase(options, wordlist)
             if options[:verbose]
-                puts "[#{phrase.complexity.to_i}, #{HaystackBruteForceComplexity.new.compute(phrase.to_s)}]: #{phrase}"
+                puts "[#{phrase.complexity}, #{HaystackBruteForceComplexity.new.compute(phrase.to_s)}]: #{phrase}"
             else
                 puts phrase
             end
@@ -61,9 +65,9 @@ class Application
             opts.on('-d', '--number_count NUMBER', 'How many nunbers in the string') do |number|
                 options[:number_count] = number.to_i
             end
-            opts.on('-t', '--stutter NUMBER', 'How many repeated syllabled in the string') do |number|
-                options[:stutter_count] = number.to_i
-            end
+#            opts.on('-t', '--stutter NUMBER', 'How many repeated syllabled in the string') do |number|
+#                options[:stutter_count] = number.to_i
+#            end
             opts.on('-p', '--phrase_count COUNT', 'Number of pass phrases to generate') do |d|
                 options[:phrase_count] = d.to_i
             end
@@ -73,6 +77,7 @@ class Application
         end
         optionParser.parse!
         options[:number_injector] = build_number_injector_terminate_on_exception(options[:number_injector], options[:number_count])
+        options[:letter_map] = LetterModifier.new(options[:letter_map], options[:letter_count])
         options
     end
 
@@ -87,7 +92,8 @@ class Application
             :stutter_injector => StutterModifier.new,
             :stutter_count => 0,
             #:letter_map => {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'},
-            :letter_map => {},
+            :letter_map => NullModifier.new,
+            :letter_count => 0,
             :phrase_count => 1,
             :verbose => false
         }
@@ -164,25 +170,8 @@ class PassPhrase
         random_words(wordlist, options[:word_count])
         inject_stutters(options[:stutter_count], options[:stutter_injector])
         @words = options[:case_mode].mutate(@words, @entropy)
-        modify_letters_in_words(options[:letter_map])
+        @words = options[:letter_map].mutate(@words, @entropy)
         @words = options[:number_injector].mutate(@words, @entropy)
-    end
-    def modify_letters_in_words(letter_map)
-        @words.map! do |word|
-            modify_letters(word, letter_map)
-        end
-    end
-    def modify_letters(word, letter_map)
-        letters = word.split('')
-        letters.map! do |letter|
-            modify_one_letter(letter, letter_map)
-        end
-        letters.join('')
-    end
-    def modify_one_letter(letter, letter_map)
-        alternate = letter_map[letter.downcase]
-        choin_toss = alternate && (@entropy.random(2) == 1)
-        choin_toss ? alternate : letter
     end
     def inject_stutters(stutter_count, stutter_injector)
         stutter_injector.inject_stutters(@words, stutter_count, @entropy)
@@ -316,6 +305,32 @@ class AlternateCaseModifier < WordWiseModifier
     end
 end
 
+class LetterModifier
+    def initialize(map, count)
+        @map = map || {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'}
+        @count = count
+    end
+    def mutate(words, entropy)
+        offsets = entropy.pick_n_from_m(@count, words.length)
+        offsets.each do |offset|
+            words[offset] = modify_letters(words[offset], @map, entropy)
+        end
+        words
+    end
+    def modify_letters(word, letter_map, entropy)
+        letters = word.split('')
+        letters.map! do |letter|
+            modify_one_letter(letter, letter_map, entropy)
+        end
+        letters.join('')
+    end
+    def modify_one_letter(letter, letter_map, entropy)
+        alternate = letter_map[letter.downcase]
+        choin_toss = alternate && (entropy.random(2) == 1)
+        choin_toss ? alternate : letter
+    end
+end
+
 class StutterModifier
     def inject_stutters(words, stutter_count, entropy)
     end
@@ -363,23 +378,15 @@ class NumbersBetweenWordsInjector < BaseNumberInjector
 end
 
 class NumbersInWordsInjectorBase < BaseNumberInjector
+    def initialize(number_count)
+        super(number_count)
+    end
     def mutate(words, entropy)
-        offsets_to_modify = compute_random_offsets(words.size, @number_count, entropy)
-        offsets_to_modify.each do |offset|
+        offsets = entropy.pick_n_from_m(@number_count, words.size)
+        offsets.each do |offset|
             words[offset] = inject_number_in_word(words[offset], make_random_number_string(entropy), entropy)
         end
         words
-    end
-    def compute_random_offsets(max_offset, number_of_offsets_to_return, entropy)
-        random_offsets = []
-        offsets = (0...max_offset).map{|x|x}
-        for i in 0...number_of_offsets_to_return
-            random = entropy.random(offsets.size)
-            offset = offsets.delete_at(random)
-            random_offsets << offset
-            break if offsets.empty?
-        end
-        random_offsets
     end
     def inject_number_in_word(word, number, entropy)
         raise 'Functionality implemented in derived classes only'
@@ -387,15 +394,21 @@ class NumbersInWordsInjectorBase < BaseNumberInjector
 end
 
 class NumbersAfterWordsInjector < NumbersInWordsInjectorBase
+    def initialize(number_count)
+        super(number_count)
+    end
     def inject_number_in_word(word, number, entropy)
         word + number.to_s
     end
 end
 
 class NumbersInsideWordsInjector < NumbersInWordsInjectorBase
+    def initialize(number_count)
+        super(number_count)
+    end
     def inject_number_in_word(word, number, entropy)
-        offset_to_insert = entropy.random(word.size)
-        word.insert(offset_to_insert, number)
+        where_to_insert = entropy.random(word.size)
+        word.insert(where_to_insert, number.to_s)
     end
 end
 

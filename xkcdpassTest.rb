@@ -4,7 +4,19 @@ require 'test/unit'
 require 'test/unit/assertions.rb'
 require 'xkcdpass.rb'
 
-class EntropyMockReturnsConstantValue
+class EntropyMockBase
+    def pick_n_from_m(n, m)
+        source = (0...m).to_a
+        target = []
+        n.times do
+            offset = random(source.size)
+            target << source.delete_at(offset)
+        end
+        target.sort
+    end
+end
+
+class EntropyMockReturnsConstantValue < EntropyMockBase
     def initialize(mock_random_value)
         raise 'random must be less than one' if mock_random_value > 1
         raise 'random must be greater than zero' if mock_random_value < 0
@@ -15,7 +27,7 @@ class EntropyMockReturnsConstantValue
     end
 end
 
-class EntropyMockReturnsValuesFromArray
+class EntropyMockReturnsValuesFromArray < EntropyMockBase
     def initialize(data)
         @data = data
     end
@@ -46,6 +58,18 @@ class EntropyTests < Test::Unit::TestCase
         max_range = 6
 
         actual = pick_n_from_m(2, max_range)
+
+        assert actual.size == 2
+        assert actual[0] > -1
+        assert actual[0] < max_range
+        assert actual[1] > -1
+        assert actual[1] < max_range
+        assert actual[0] < actual[1]
+    end
+    def pick_three_random_value_from_range_of_two_elements
+        max_range = 2
+
+        actual = pick_n_from_m(3, max_range)
 
         assert actual.size == 2
         assert actual[0] > -1
@@ -185,80 +209,97 @@ class CaseModifierTests < Test::Unit::TestCase
 
         assert_equal expected, actual
     end
-    def test_modify_letters_in_words_with_large_random_value
-        words = ['This' 'That', 'ThAt']
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
-        passphrase.words = words
-        letter_map = {'a' => '@'}
-        expected = ['This' 'Th@t', 'Th@t']
-        
-        actual = passphrase.modify_letters_in_words(letter_map)
-        
-        assert_equal expected, actual
-    end
-    def test_modify_letters_in_words_with_small_random_value_the_letter_is_not_altered
-        words = ['This' 'That', 'ThAt']
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.1))
-        passphrase.words = words
-        letter_map = {'a' => '@'}
-        expected = ['This' 'That', 'ThAt']
-        
-        actual = passphrase.modify_letters_in_words(letter_map)
-        
-        assert_equal expected, actual
-    end
-    def test_modify_letters_with_large_random_value
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
-        word = 'ThatAt'
-        letter_map = {'a' => '@'}
-        expected = 'Th@t@t'
-
-        actual = passphrase.modify_letters(word, letter_map)
-
-        assert_equal expected, actual
-    end
-    def test_modify_letters_with_small_random_value_the_letter_is_not_altered
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.1))
-        word = 'ThatAt'
-        letter_map = {'a' => '@'}
-        expected = 'ThatAt'
-
-        actual = passphrase.modify_letters(word, letter_map)
-
-        assert_equal expected, actual
-    end
 end
 
 class ModifyLetterTests < Test::Unit::TestCase
-    def test_modify_letters_with_with_positive_cointoss
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
-        expected = 'Th%s %s'
-
-        actual = passphrase.modify_letters('This Is', {'i'=>'%'})
-
-        assert_equal expected, actual
-    end
-    def test_modify_letters_with_with_negative_cointoss
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.1))
-        expected = 'This Is'
-
-        actual = passphrase.modify_letters('This Is', {'i'=>'%'})
-
-        assert_equal expected, actual
-    end
     def test_modify_one_letter_replaces_matching_letters
-        passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.9))
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        modifier = LetterModifier.new({}, 0)
         expected = '%'
 
-        actual = passphrase.modify_one_letter('i', {'i'=>'%'})
+        actual = modifier.modify_one_letter('i', {'i'=>'%'}, entropy)
+
+        assert_equal expected, actual
+    end
+    def test_modify_one_letter_with_negative_cointoss_does_not_replace_matching_letters
+        entropy = EntropyMockReturnsConstantValue.new(0.1)
+        modifier = LetterModifier.new({}, 0)
+        expected = 'i'
+
+        actual = modifier.modify_one_letter('i', {'i'=>'%'}, entropy)
 
         assert_equal expected, actual
     end
     def test_modify_one_letter_returns_nonmatching_letters_unchanged
-        passphrase = PassPhrase.new
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        modifier = LetterModifier.new({}, 0)
         expected = 't'
 
-        actual = passphrase.modify_one_letter('t', {'i'=>'%'})
+        actual = modifier.modify_one_letter('t', {'i'=>'%'}, entropy)
+
+        assert_equal expected, actual
+    end
+    def test_modify_letters_with_with_positive_cointoss_replaces_matching_letters
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        modifier = LetterModifier.new({}, 0)
+        expected = 'Th%s %s'
+
+        actual = modifier.modify_letters('This Is', {'i'=>'%'}, entropy)
+
+        assert_equal expected, actual
+    end
+    def test_modify_letters_with_with_negative_cointoss_does_not_replace_letters
+        entropy = EntropyMockReturnsConstantValue.new(0.1)
+        modifier = LetterModifier.new({}, 0)
+        expected = 'This Is'
+
+        actual = modifier.modify_letters('This Is', {'i'=>'%'}, entropy)
+
+        assert_equal expected, actual
+    end
+    def test_modify_letters_in_one_word_only
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        letter_map = {'a' => '@'}
+        number_of_words_to_modify = 1
+        modifier = LetterModifier.new(letter_map, number_of_words_to_modify)
+        words    = ['This', 'That', 'ThAt']
+        expected = ['This', 'That', 'Th@t']
+        
+        actual = modifier.mutate(words, entropy)
+        
+        assert_equal expected, actual
+    end
+    def test_modify_letters_in_all_three_word_only
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        letter_map = {'a' => '@'}
+        number_of_words_to_modify = 3
+        modifier = LetterModifier.new(letter_map, number_of_words_to_modify)
+        words    = ['This', 'That', 'ThAt']
+        expected = ['This', 'Th@t', 'Th@t']
+        
+        actual = modifier.mutate(words, entropy)
+        
+        assert_equal expected, actual
+    end
+    def test_modify_letters_with_large_random_value
+        entropy = EntropyMockReturnsConstantValue.new(0.9)
+        letter_map = {'a' => '@'}
+        modifier = LetterModifier.new(letter_map, 0)
+        word = 'ThatAt'
+        expected = 'Th@t@t'
+
+        actual = modifier.modify_letters(word, letter_map, entropy)
+
+        assert_equal expected, actual
+    end
+    def test_modify_letters_with_small_random_value_the_letter_is_not_altered
+        entropy = EntropyMockReturnsConstantValue.new(0.1)
+        letter_map = {'a' => '@'}
+        modifier = LetterModifier.new(letter_map, 0)
+        word = 'ThatAt'
+        expected = 'ThatAt'
+
+        actual = modifier.modify_letters(word, letter_map, entropy)
 
         assert_equal expected, actual
     end
@@ -452,7 +493,7 @@ class NumbersInsideWordsInjectorTests < Test::Unit::TestCase
         injector = NumbersInsideWordsInjector.new(number_count)
         entropy = EntropyMockReturnsValuesFromArray.new([0.9, 0.8, 0.7, 0.6, 0.5, 0.8])
         input    = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddddd','eeeeeeeee']
-        expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddddd50dd','eeeee70eeee']
+        expected = ['aaaaaaaaa','bbbbbbbbb','ccccccccc','ddddd70dddd','eeeeeee50ee']
 
         actual = injector.mutate(input, entropy)
 
@@ -672,8 +713,8 @@ class CreatePassPhraseTests < Test::Unit::TestCase
     def test_inject_numbers_inside_words
         application = Application.new
         passphrase = PassPhrase.new(EntropyMockReturnsConstantValue.new(0.5))
-        number_count = 1
         options = application.default_options
+        number_count = 1
         options[:number_injector] = NumbersInsideWordsInjector.new(number_count)
         word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']
         expected = 'ccccccccc ccccccccc cccc50ccccc ccccccccc'
