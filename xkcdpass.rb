@@ -8,17 +8,19 @@ require 'optparse'
 # Add option for stutter, find a syllable and repeat it several times
 # Add option for randomizing all option values, which contributes to internal complexity
 
+$verbose = false
+
 class Application
     def main
         options = parse_command_line_options
         wordlist = read_dictionary_file(options[:file])
-        if options[:verbose]
+        if $verbose
             puts "wordlist contains #{wordlist.size} words, giving #{log2(wordlist.size)} bits per word"
         end
         options[:phrase_count].times do
             phrase = PassPhrase.new
             phrase.create_pass_phrase(options, wordlist)
-            if options[:verbose]
+            if $verbose
                 puts "[#{phrase.entropy}, #{HaystackBruteForceComplexity.new.compute(phrase.to_s)}]: #{phrase}"
             else
                 puts phrase
@@ -42,7 +44,7 @@ class Application
                 options[:separator] = separator
             end
             opts.on('-c', '--case CASE_MODE', "One of  'upper', 'lower', 'capitalize', 'alternate' or 'random'") do |mode|
-                options[:case_mode] = build_case_modifier_terminate_on_exception(mode)
+                options[:case_mode] = mode.to_sym
             end
             opts.on('-n', '--numbers NUMBERS_MODE', "One of  'between', 'after' or 'inside'") do |mode|
                 options[:number_injector] = mode.to_sym
@@ -56,12 +58,13 @@ class Application
             opts.on('-p', '--phrase_count COUNT', 'Number of pass phrases to generate') do |d|
                 options[:phrase_count] = d.to_i
             end
-            opts.on('-v', '--verbose', 'Show complexity of the password') do
-                options[:verbose] = true
+            opts.on('-v', '--verbose', 'Show complexity of the password, and show more details on errors') do
+                $verbose = true
             end
         end
         optionParser.parse!
-        options[:number_injector] = build_number_injector_terminate_on_exception(options[:number_injector], options[:number_count])
+        options[:case_mode] = build_case_modifier(options[:case_mode])
+        options[:number_injector] = build_number_injector(options[:number_injector], options[:number_count])
         options[:letter_map] = LetterModifier.new(options[:letter_map], options[:letter_count])
         options
     end
@@ -82,15 +85,8 @@ class Application
             :verbose => false
         }
     end
-    def build_case_modifier_terminate_on_exception(mode)
-        begin
-            build_case_modifier(mode)
-        rescue Exception => exception
-            puts exception.message
-            exit
-        end
-    end
     def build_case_modifier(mode)
+        return mode unless mode.instance_of? Symbol
         case mode.to_sym
             when :upper
                 UpCaseModifier.new
@@ -104,14 +100,6 @@ class Application
                 AlternateCaseModifier.new
             else
                 raise Exception.new("Unknown case mode #{mode.to_s}")
-        end
-    end
-    def build_number_injector_terminate_on_exception(mode, number_count)
-        begin
-            build_number_injector(mode, number_count)
-        rescue Exception => exception
-            puts exception.message
-            exit
         end
     end
     def build_number_injector(mode, number_count)
@@ -130,7 +118,7 @@ class Application
 end
 
 class PassPhrase
-    attr_accessor :words
+    attr_reader :words
     def initialize(random_source = nil)
         @random_source = random_source || RandomSource.new
         @words  = []
@@ -392,4 +380,13 @@ class NumbersInsideWordsInjector < NumbersInWordsInjectorBase
     end
 end
 
-Application.new.main
+
+begin
+    Application.new.main
+rescue Exception => exception
+    if $verbose
+        puts exception.backtrace.join("\n\t")
+    else
+        puts exception.message
+    end
+end

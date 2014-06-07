@@ -200,8 +200,6 @@ class CaseModifierTests < Test::Unit::TestCase
     end
     def test_modify_case
         words = ['this', 'THAT']
-        passphrase = PassPhrase.new
-        passphrase.words = words
         modifier = CapitalizeCaseModifier.new
         expected = ['This', 'That']
         
