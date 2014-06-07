@@ -8,20 +8,20 @@ require 'optparse'
 # Add option for stutter, find a syllable and repeat it several times
 # Add option for randomizing all option values, which contributes to internal complexity
 
-$verbose = false
+$verbose = :none
 
 class Application
     def main
         options = parse_command_line_options
         wordlist = read_dictionary_file(options[:file])
-        if $verbose
+        if $verbose == :full
             puts "wordlist contains #{wordlist.size} words, giving #{log2(wordlist.size)} bits per word"
         end
         options[:phrase_count].times do
             phrase = PassPhrase.new
             phrase.create_pass_phrase(options, wordlist)
-            if $verbose
-                puts "[#{phrase.entropy}, #{HaystackBruteForceComplexity.new.compute(phrase.to_s)}]: #{phrase}"
+            if $verbose == :some
+                puts phrase.report
             else
                 puts phrase
             end
@@ -58,8 +58,8 @@ class Application
             opts.on('-p', '--phrase_count COUNT', 'Number of pass phrases to generate') do |d|
                 options[:phrase_count] = d.to_i
             end
-            opts.on('-v', '--verbose', 'Show complexity of the password, and show more details on errors') do
-                $verbose = true
+            opts.on('-v', '--verbose MODE', "One of 'none', 'some' and 'full'.") do |mode|
+                $verbose = mode.to_sym
             end
         end
         optionParser.parse!
@@ -127,16 +127,26 @@ class PassPhrase
     def entropy
         @random_source.entropy
     end
+    def haystack
+        HaystackBruteForceComplexity.new.compute(to_s)
+    end
     def to_s
         @words.join(@separator)
     end
+    def report
+        "Entropy=#{entropy.round(1)} Haystack=#{haystack.round(1)} Phrase='#{to_s}'"
+    end
+    def verbosity(step)
+        yield
+        puts "#{step} #{report}" if $verbose == :full
+    end
     def create_pass_phrase(options, wordlist)
         @separator = options[:separator]
-        random_words(wordlist, options[:word_count])
-        inject_stutters(options[:stutter_count], options[:stutter_injector])
-        @words = options[:case_mode].mutate(@words, @random_source)
-        @words = options[:letter_map].mutate(@words, @random_source)
-        @words = options[:number_injector].mutate(@words, @random_source)
+        verbosity('Pick words:    ') { random_words(wordlist, options[:word_count]) }
+        verbosity('Add stutter:   ') { inject_stutters(options[:stutter_count], options[:stutter_injector]) }
+        verbosity('Change case:   ') { @words = options[:case_mode].mutate(@words, @random_source) }
+        verbosity('Change letters:') { @words = options[:letter_map].mutate(@words, @random_source) }
+        verbosity('Add digits:    ') { @words = options[:number_injector].mutate(@words, @random_source) }
     end
     def inject_stutters(stutter_count, stutter_injector)
         stutter_injector.inject_stutters(@words, stutter_count, @random_source)
@@ -145,7 +155,7 @@ class PassPhrase
         @words = []
         number_of_words.times do
             offset = @random_source.random(word_list.size)
-            @words << word_list[offset.to_i]
+            @words << word_list[offset.to_i].dup
         end
     end
 end
@@ -384,9 +394,9 @@ end
 begin
     Application.new.main
 rescue Exception => exception
-    if $verbose
-        puts exception.backtrace.join("\n\t")
-    else
+    if $verbose == :none
         puts exception.message
+    else
+        puts exception.backtrace.join("\n\t")
     end
 end
