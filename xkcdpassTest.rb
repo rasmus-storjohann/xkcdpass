@@ -310,12 +310,6 @@ class BuildNumberInjectorTests < Test::Unit::TestCase
 
         assert injector.instance_of? NumbersBetweenWordsInjector
     end
-    def test_build_after_number_injector
-        application = Application.new
-        injector = application.build_number_injector(:after, 1)
-
-        assert injector.instance_of? NumbersAfterWordsInjector
-    end
     def test_build_inside_number_injector
         application = Application.new
         injector = application.build_number_injector(:inside, 1)
@@ -411,62 +405,6 @@ class NumbersBetweenWordsInjectorTests < Test::Unit::TestCase
         injector = NumbersBetweenWordsInjector.new(number_count)
         expected = ['a','b','c','d','e','47']
         random_source = RandomSourceMockReturnsValuesFromArray.new([1.0, 0.47])
-
-        actual = injector.mutate(['a','b','c','d','e'], random_source)
-
-        assert_equal expected, actual
-    end
-end
-
-class NumbersAfterWordsInjectorTests < Test::Unit::TestCase
-    def test_insert_zero_numbers
-        number_count = 0
-        injector = NumbersAfterWordsInjector.new(number_count)
-        random_source = RandomSourceMockReturnsValuesFromArray.new([])
-        expected = ['a','b','c','d','e']
-
-        actual = injector.mutate(['a','b','c','d','e'], random_source)
-
-        assert_equal expected, actual
-    end
-    def test_insert_two_numbers
-        number_count = 2
-        injector = NumbersAfterWordsInjector.new(number_count)
-        random_source = RandomSourceMockReturnsValuesFromArray.new([0.1, 0.2, 0.3, 0.4])
-        expected = ['a30','b40','c','d','e']
-
-        actual = injector.mutate(['a','b','c','d','e'], random_source)
-
-        assert_equal expected, actual
-    end
-    def test_small_first_random_number_results_in_injection_early_in_the_string
-        number_count = 1
-        injector = NumbersAfterWordsInjector.new(number_count)
-        random_source = RandomSourceMockReturnsValuesFromArray.new([0.1, 0.1, 0.1])
-        expected = ['a10','b','c','d','e']
-
-        actual = injector.mutate(['a','b','c','d','e'], random_source)
-
-        assert_equal expected, actual
-    end
-    def test_large_first_random_number_results_in_injection_late_in_the_string
-        number_count = 1
-        injector = NumbersAfterWordsInjector.new(number_count)
-        random_number_locations = 0.9
-        random_number_values = 0.13
-        random_numbers = [random_number_locations, random_number_values].flatten
-        random_source = RandomSourceMockReturnsValuesFromArray.new(random_numbers)
-        expected = ['a','b','c','d','e13']
-
-        actual = injector.mutate(['a','b','c','d','e'], random_source)
-
-        assert_equal expected, actual
-    end
-    def test_second_random_number_is_injected_in_the_strinng
-        number_count = 1
-        injector = NumbersAfterWordsInjector.new(number_count)
-        expected = ['a','b','c12','d','e']
-        random_source = RandomSourceMockReturnsValuesFromArray.new([0.5, 0.12])
 
         actual = injector.mutate(['a','b','c','d','e'], random_source)
 
@@ -694,20 +632,6 @@ class CreatePassPhraseTests < Test::Unit::TestCase
 
         assert_equal expected, actual        
     end
-    def test_inject_numbers_after_words
-        application = Application.new
-        passphrase = PassPhrase.new(RandomSourceMockReturnsConstantValue.new(0.5))
-        options = application.default_options
-        number_count = 1
-        options[:number_injector] = NumbersAfterWordsInjector.new(number_count)
-        word_list = ['aaaaaaaaa', 'bbbbbbbbb', 'ccccccccc', 'ddddddddd']
-        expected = 'ccccccccc ccccccccc ccccccccc50 ccccccccc'
-
-        passphrase.create_pass_phrase(options, word_list)
-        actual = passphrase.to_s
-
-        assert_equal expected, actual        
-    end
     def test_inject_numbers_inside_words
         application = Application.new
         passphrase = PassPhrase.new(RandomSourceMockReturnsConstantValue.new(0.5))
@@ -814,13 +738,6 @@ class IntegrationTests < Test::Unit::TestCase
         expected = /^(([A-Za-z]+ )|([0-9]+ ))+$/
 
         actual = `./xkcdpass.rb -f sample_dict.txt -n between -d 2`.strip + ' '
-
-        assert_match expected, actual
-    end
-    def test_numbers_after
-        expected = /^([A-Za-z]+[0-9]* ){4}$/
-
-        actual = `./xkcdpass.rb -f sample_dict.txt -n after -d 2`.strip + ' '
 
         assert_match expected, actual
     end

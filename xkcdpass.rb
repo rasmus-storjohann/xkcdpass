@@ -46,7 +46,7 @@ class Application
             opts.on('-c', '--case CASE_MODE', "One of  'upper', 'lower', 'capitalize', 'alternate' or 'random'") do |mode|
                 options[:case_mode] = mode.to_sym
             end
-            opts.on('-n', '--numbers NUMBERS_MODE', "One of  'between', 'after' or 'inside'") do |mode|
+            opts.on('-n', '--numbers NUMBERS_MODE', "One of  'between' or 'inside'") do |mode|
                 options[:number_injector] = mode.to_sym
             end
             opts.on('-d', '--number_count NUMBER', 'How many nunbers in the string') do |number|
@@ -107,8 +107,6 @@ class Application
         case mode
             when :between
                 NumbersBetweenWordsInjector.new(number_count)
-            when :after
-                NumbersAfterWordsInjector.new(number_count)
             when :inside
                 NumbersInsideWordsInjector.new(number_count)
             else
@@ -137,8 +135,10 @@ class PassPhrase
         "Entropy=#{entropy.round(1)} Haystack=#{haystack.round(1)} Phrase='#{to_s}'"
     end
     def verbosity(step)
+        before = to_s
         yield
-        puts "#{step} #{report}" if $verbose == :full
+        after = to_s
+        puts "#{step} #{report}" if $verbose == :full && before != after
     end
     def create_pass_phrase(options, wordlist)
         @separator = options[:separator]
@@ -332,9 +332,6 @@ class StutterModifier
 end
 
 class BaseNumberInjector
-    def initialize(number_count)
-        @number_count = number_count
-    end
     def make_random_number_string(random_source)
         random_source.random(100).to_s
     end
@@ -342,7 +339,7 @@ end
 
 class NumbersBetweenWordsInjector < BaseNumberInjector
     def initialize(number_count)
-        super(number_count)
+        @number_count = number_count
     end
     def mutate(words, random_source)
         @number_count.times do
@@ -354,9 +351,9 @@ class NumbersBetweenWordsInjector < BaseNumberInjector
     end
 end
 
-class NumbersInWordsInjectorBase < BaseNumberInjector
+class NumbersInsideWordsInjector < BaseNumberInjector
     def initialize(number_count)
-        super(number_count)
+        @number_count = number_count
     end
     def mutate(words, random_source)
         offsets = random_source.pick_n_from_m(@number_count, words.size)
@@ -367,29 +364,10 @@ class NumbersInWordsInjectorBase < BaseNumberInjector
         words
     end
     def inject_number_in_word(word, number, random_source)
-        raise 'Functionality implemented in derived classes only'
-    end
-end
-
-class NumbersAfterWordsInjector < NumbersInWordsInjectorBase
-    def initialize(number_count)
-        super(number_count)
-    end
-    def inject_number_in_word(word, number, random_source)
-        word + number.to_s
-    end
-end
-
-class NumbersInsideWordsInjector < NumbersInWordsInjectorBase
-    def initialize(number_count)
-        super(number_count)
-    end
-    def inject_number_in_word(word, number, random_source)
         where_to_insert = random_source.random(word.size)
         word.insert(where_to_insert, number.to_s)
     end
 end
-
 
 begin
     Application.new.main
