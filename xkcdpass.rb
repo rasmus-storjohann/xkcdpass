@@ -52,9 +52,9 @@ class Application
             opts.on('-d', '--number_count NUMBER', 'How many nunbers in the string') do |number|
                 options[:number_count] = number.to_i
             end
-#            opts.on('-t', '--stutter NUMBER', 'How many repeated syllabled in the string') do |number|
-#                options[:stutter_count] = number.to_i
-#            end
+            opts.on('-d', '--stutter_count NUMBER', 'How many stutters in the string') do |number|
+                options[:stutter_count] = number.to_i
+            end
             opts.on('-p', '--phrase_count COUNT', 'Number of pass phrases to generate') do |d|
                 options[:phrase_count] = d.to_i
             end
@@ -65,6 +65,7 @@ class Application
         optionParser.parse!
         options[:case_mode] = build_case_modifier(options[:case_mode])
         options[:number_injector] = build_number_injector(options[:number_injector], options[:number_count])
+        options[:stutter_injector] = build_stutter_injector(options[:stutter_count])
         options[:letter_map] = LetterModifier.new(options[:letter_map], options[:letter_count])
         options
     end
@@ -76,7 +77,7 @@ class Application
             :case_mode => NullModifier.new,
             :number_injector => NullModifier.new,
             :number_count => 0,
-            :stutter_injector => StutterModifier.new,
+            :stutter_injector => NullModifier.new,
             :stutter_count => 0,
             #:letter_map => {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'},
             :letter_map => NullModifier.new,
@@ -113,6 +114,10 @@ class Application
                 raise Exception.new("Unknown number inject mode #{mode.to_s}")
         end
     end
+    def build_stutter_injector(number)
+        return number unless number.instance_of? Fixnum
+        StutterModifier.new(number)
+    end
 end
 
 class PassPhrase
@@ -143,7 +148,7 @@ class PassPhrase
     def create_pass_phrase(options, wordlist)
         @separator = options[:separator]
         verbosity('Pick words:    ') { random_words(wordlist, options[:word_count]) }
-        verbosity('Add stutter:   ') { inject_stutters(options[:stutter_count], options[:stutter_injector]) }
+        verbosity('Add stutter:   ') { @words = options[:stutter_injector].mutate(@words, @random_source) }
         verbosity('Change case:   ') { @words = options[:case_mode].mutate(@words, @random_source) }
         verbosity('Change letters:') { @words = options[:letter_map].mutate(@words, @random_source) }
         verbosity('Add digits:    ') { @words = options[:number_injector].mutate(@words, @random_source) }
@@ -208,10 +213,9 @@ def read_dictionary_file(filename)
     words = []
     File.open(filename, 'r') do |file|
         while (line = file.gets)
-            is_comment = line =~ /^\#/
-            contains_apostrophe = line =~ /\'/
-            if (!is_comment && !contains_apostrophe)
-                words << line.strip
+            line.strip!
+            if line =~ /^[a-zA-Z]+$/
+                words << line
             end
         end
     end
@@ -308,14 +312,29 @@ class LetterModifier
     end
 end
 
-class StutterModifier
-    def inject_stutters(words, stutter_count, random_source)
+class StutterModifier < WordWiseModifier
+    def initialize(stutter_count)
+        @stutter_count = stutter_count
+    end
+    def mutate(words, random_source)
+        indeces = random_source.pick_n_from_m(@stutter_count, words.size)
+        indeces.each do |index|
+            words[index] = mutate_word(words[index], random_source)
+        end
+        words
+    end
+    def mutate_word(word, random_source)
+        syllables = split_into_syllables(word)
+        index = random_source.random(syllables.size-1)
+        count = 1 + random_source.random(2)
+        syllables.insert(index, syllables[index] * count)
+        syllables.join('')
     end
     def split_into_syllables(word)
         result = []
         while word.length > 0
-            first_syllable, word = split_off_first_syllable(word)
-            result << first_syllable
+            syllable, word = split_off_first_syllable(word)
+            result << syllable
         end
         result
     end
@@ -327,11 +346,14 @@ class StutterModifier
             return [$1, $2]
         when /^([^AEIOUaeiou]+[AEIOUaeiou]+)(.*)/
             return [$1, $2]
+        else
+            return [word, '']
         end
     end
 end
 
 class BaseNumberInjector
+    # TODO move this to random source class
     def make_random_number_string(random_source)
         random_source.random(100).to_s
     end

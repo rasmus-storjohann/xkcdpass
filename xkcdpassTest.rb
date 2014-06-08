@@ -326,7 +326,7 @@ end
 
 class StutterModifierTest < Test::Unit::TestCase
     def test_syllables_empty_string
-        modifier = StutterModifier.new
+        modifier = StutterModifier.new(0)
         expected = []
 
         actual = modifier.split_into_syllables('')
@@ -334,7 +334,7 @@ class StutterModifierTest < Test::Unit::TestCase
         assert_equal expected, actual
     end
     def test_syllables_one_syllable
-        modifier = StutterModifier.new
+        modifier = StutterModifier.new(0)
         expected = ['foo']
 
         actual = modifier.split_into_syllables('foo')
@@ -342,7 +342,7 @@ class StutterModifierTest < Test::Unit::TestCase
         assert_equal expected, actual
     end
     def test_syllables_two_syllables
-        modifier = StutterModifier.new
+        modifier = StutterModifier.new(0)
         expected = ['foo','bla']
 
         actual = modifier.split_into_syllables('foobla')
@@ -350,7 +350,7 @@ class StutterModifierTest < Test::Unit::TestCase
         assert_equal expected, actual
     end
     def test_syllables_leading_vowels
-        modifier = StutterModifier.new
+        modifier = StutterModifier.new(0)
         expected = ['ae','foo','bla']
 
         actual = modifier.split_into_syllables('aefoobla')
