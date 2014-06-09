@@ -125,7 +125,7 @@ class PassPhrase
     def initialize(random_source = nil)
         @random_source = random_source || RandomSource.new
         @words  = []
-        @separator = ''
+        @separator = ' '
     end
     def entropy
         @random_source.entropy
@@ -146,8 +146,8 @@ class PassPhrase
         puts "#{step} #{report}" if $verbose == :full && before != after
     end
     def create_pass_phrase(options, wordlist)
-        @separator = options[:separator]
         verbosity('Pick words:    ') { random_words(wordlist, options[:word_count]) }
+        verbosity('Add separator: ') { @separator = options[:separator] }
         verbosity('Add stutter:   ') { @words = options[:stutter_injector].mutate(@words, @random_source) }
         verbosity('Change case:   ') { @words = options[:case_mode].mutate(@words, @random_source) }
         verbosity('Change letters:') { @words = options[:letter_map].mutate(@words, @random_source) }
@@ -352,35 +352,28 @@ class StutterModifier < WordWiseModifier
     end
 end
 
-class BaseNumberInjector
-    # TODO move this to random source class
-    def make_random_number_string(random_source)
-        random_source.random(100).to_s
-    end
-end
-
-class NumbersBetweenWordsInjector < BaseNumberInjector
+class NumbersBetweenWordsInjector
     def initialize(number_count)
         @number_count = number_count
     end
     def mutate(words, random_source)
         @number_count.times do
             offset = random_source.random(words.size).to_i
-            random_number_string = make_random_number_string(random_source)
+            random_number_string = random_source.random(100).to_s
             words.insert(offset, random_number_string)
         end
         words
     end
 end
 
-class NumbersInsideWordsInjector < BaseNumberInjector
+class NumbersInsideWordsInjector
     def initialize(number_count)
         @number_count = number_count
     end
     def mutate(words, random_source)
         offsets = random_source.pick_n_from_m(@number_count, words.size)
         offsets.each do |offset|
-            random_number_string = make_random_number_string(random_source)
+            random_number_string = random_source.random(100).to_s
             words[offset] = inject_number_in_word(words[offset], random_number_string, random_source)
         end
         words
