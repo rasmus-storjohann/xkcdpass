@@ -118,6 +118,18 @@ class Application
         return number unless number.instance_of? Fixnum
         StutterModifier.new(number)
     end
+    def read_dictionary_file(filename)
+        words = []
+        File.open(filename, 'r') do |file|
+            while (line = file.gets)
+                line.strip!
+                if line =~ /^[a-zA-Z]+$/
+                    words << line
+                end
+            end
+        end
+        words.sort.uniq
+    end
 end
 
 class PassPhrase
@@ -127,17 +139,17 @@ class PassPhrase
         @words  = []
         @separator = ' '
     end
-    def entropy
-        @random_source.entropy
-    end
-    def haystack
-        HaystackBruteForceComplexity.new.compute(to_s)
-    end
     def to_s
         @words.join(@separator)
     end
+    def dictionary_complexity
+        @random_source.entropy
+    end
+    def brute_force_complexity
+        brute_force_complexity(to_s)
+    end
     def report
-        "Entropy=#{entropy.round(1)} Haystack=#{haystack.round(1)} Phrase='#{to_s}'"
+        "Dictionary=#{dictionary_complexity.round(1)} BruteForce=#{brute_force_complexity.round(1)} Phrase='#{to_s}'"
     end
     def verbosity(step)
         before = to_s
@@ -146,7 +158,7 @@ class PassPhrase
         puts "#{step} #{report}" if $verbose == :full && before != after
     end
     def create_pass_phrase(options, wordlist)
-        verbosity('Pick words:    ') { random_words(wordlist, options[:word_count]) }
+        verbosity('Pick words:    ') { @words = random_words(wordlist, options[:word_count]) }
         verbosity('Add separator: ') { @separator = options[:separator] }
         verbosity('Add stutter:   ') { @words = options[:stutter_injector].mutate(@words, @random_source) }
         verbosity('Change case:   ') { @words = options[:case_mode].mutate(@words, @random_source) }
@@ -157,11 +169,12 @@ class PassPhrase
         stutter_injector.inject_stutters(@words, stutter_count, @random_source)
     end
     def random_words(word_list, number_of_words)
-        @words = []
+        words = []
         number_of_words.times do
             offset = @random_source.random(word_list.size)
-            @words << word_list[offset.to_i].dup
+            words << word_list[offset.to_i].dup
         end
+        words
     end
 end
 
@@ -187,39 +200,17 @@ end
 
 $SYMBOLS = '!@#$%^&*()-_=+{[}]:;"\'|\<,>.?/'
 
-class NaiveBruteForceComplexity
-    def compute(string)
-        domain = ('a'..'z').count + ('A'..'Z').count + ('0'..'9').count + $SYMBOLS.count
-        log2(domain) * string.length
-    end
-end
-
-class HaystackBruteForceComplexity
-    def compute(string)
-        logs = 0
-        logs += log2(('a'..'z').count) if string =~ /[a-z]/
-        logs += log2(('A'..'Z').count) if string =~ /[A-Z]/
-        logs += log2(('0'..'9').count) if string =~ /[0-9]/
-        logs += log2($SYMBOLS.count) if string =~ /#{$SYMBOLS}/
-        logs * string.length
-    end
+def brute_force_complexity(string)
+    logs = 0
+    logs += log2(('a'..'z').count) if string =~ /[a-z]/
+    logs += log2(('A'..'Z').count) if string =~ /[A-Z]/
+    logs += log2(('0'..'9').count) if string =~ /[0-9]/
+    logs += log2($SYMBOLS.count) if string =~ /#{$SYMBOLS}/
+    logs * string.length
 end
 
 def log2(value)
     Math.log(value)/Math.log(2)
-end
-
-def read_dictionary_file(filename)
-    words = []
-    File.open(filename, 'r') do |file|
-        while (line = file.gets)
-            line.strip!
-            if line =~ /^[a-zA-Z]+$/
-                words << line
-            end
-        end
-    end
-    words.sort.uniq
 end
 
 class WordWiseModifier
@@ -315,6 +306,7 @@ end
 class StutterModifier < WordWiseModifier
     def initialize(stutter_count)
         @stutter_count = stutter_count
+        @MAX_REPEAT_COUNT = 2
     end
     def mutate(words, random_source)
         indeces = random_source.pick_n_from_m(@stutter_count, words.size)
@@ -326,8 +318,8 @@ class StutterModifier < WordWiseModifier
     def mutate_word(word, random_source)
         syllables = split_into_syllables(word)
         index = random_source.random(syllables.size-1)
-        count = 1 + random_source.random(2)
-        syllables.insert(index, syllables[index] * count)
+        repeat_count = 1 + random_source.random(@MAX_REPEAT_COUNT)
+        syllables.insert(index, syllables[index] * repeat_count)
         syllables.join('')
     end
     def split_into_syllables(word)
@@ -341,7 +333,7 @@ class StutterModifier < WordWiseModifier
     def split_off_first_syllable(word)
         case word
         when /[^A-Za-z]/
-            raise "#{word}: Invalid argument, letters only please"
+            raise "#{word}: Invalid argument, must contain letters only"
         when /^([AEIOUaeiou]+)(.*)/
             return [$1, $2]
         when /^([^AEIOUaeiou]+[AEIOUaeiou]+)(.*)/
@@ -355,11 +347,12 @@ end
 class NumbersBetweenWordsInjector
     def initialize(number_count)
         @number_count = number_count
+        @MAX_RANDOM_NUMBER = 100
     end
     def mutate(words, random_source)
         @number_count.times do
             offset = random_source.random(words.size).to_i
-            random_number_string = random_source.random(100).to_s
+            random_number_string = random_source.random(@MAX_RANDOM_NUMBER).to_s
             words.insert(offset, random_number_string)
         end
         words
@@ -369,11 +362,12 @@ end
 class NumbersInsideWordsInjector
     def initialize(number_count)
         @number_count = number_count
+        @MAX_RANDOM_NUMBER = 100
     end
     def mutate(words, random_source)
         offsets = random_source.pick_n_from_m(@number_count, words.size)
         offsets.each do |offset|
-            random_number_string = random_source.random(100).to_s
+            random_number_string = random_source.random(@MAX_RANDOM_NUMBER).to_s
             words[offset] = inject_number_in_word(words[offset], random_number_string, random_source)
         end
         words
@@ -386,6 +380,8 @@ end
 
 begin
     Application.new.main
+rescue SystemExit
+    # ignore
 rescue Exception => exception
     if $verbose == :none
         puts exception.message

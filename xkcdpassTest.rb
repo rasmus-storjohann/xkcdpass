@@ -502,7 +502,7 @@ class ComputedComplexityTests < Test::Unit::TestCase
         
         phrase = PassPhrase.new
         phrase.create_pass_phrase(options, wordlist)
-        actual = phrase.entropy
+        actual = phrase.dictionary_complexity
 
         assert_equal expected, actual
     end
@@ -515,7 +515,7 @@ class ComputedComplexityTests < Test::Unit::TestCase
         
         phrase = PassPhrase.new
         phrase.create_pass_phrase(options, wordlist)
-        actual = phrase.entropy
+        actual = phrase.dictionary_complexity
 
         assert_equal expected, actual
     end
@@ -529,7 +529,7 @@ class ComputedComplexityTests < Test::Unit::TestCase
         
         phrase = PassPhrase.new
         phrase.create_pass_phrase(options, wordlist)
-        actual = phrase.entropy
+        actual = phrase.dictionary_complexity
 
         assert_equal expected, actual
     end
@@ -539,54 +539,48 @@ class BruteForceComplexityTests < Test::Unit::TestCase
     def test_lower_empty_string
         argument = ''
         expected = 0
-        complexity = HaystackBruteForceComplexity.new
 
-        actual = complexity.compute(argument)
+        actual = brute_force_complexity(argument)
 
         assert_equal expected, actual
     end
     def test_lower_case_letter
         argument = 'a'
         expected = log2(26)
-        complexity = HaystackBruteForceComplexity.new
 
-        actual = complexity.compute(argument)
+        actual = brute_force_complexity(argument)
 
         assert_equal expected, actual
     end
     def test_upper_case_letter
         argument = 'A'
         expected = log2(26)
-        complexity = HaystackBruteForceComplexity.new
 
-        actual = complexity.compute(argument)
+        actual = brute_force_complexity(argument)
 
         assert_equal expected, actual
     end
     def test_digit_letter
         argument = '0'
         expected = log2(10)
-        complexity = HaystackBruteForceComplexity.new
 
-        actual = complexity.compute(argument)
+        actual = brute_force_complexity(argument)
 
         assert_equal expected, actual
     end
     def test_upper_and_lower_case_letters
         argument = 'ab'
         expected = 2*log2(26)
-        complexity = HaystackBruteForceComplexity.new
 
-        actual = complexity.compute(argument)
+        actual = brute_force_complexity(argument)
 
         assert_equal expected, actual
     end
     def test_upper_and_lower_case_letters
         argument = 'aA'
         expected = 4*log2(26)
-        complexity = HaystackBruteForceComplexity.new
 
-        actual = complexity.compute(argument)
+        actual = brute_force_complexity(argument)
 
         assert_equal expected, actual
     end
