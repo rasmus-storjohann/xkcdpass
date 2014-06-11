@@ -540,7 +540,7 @@ class BruteForceComplexityTests < Test::Unit::TestCase
         argument = ''
         expected = 0
 
-        actual = brute_force_complexity(argument)
+        actual = compute_brute_force_complexity(argument)
 
         assert_equal expected, actual
     end
@@ -548,7 +548,7 @@ class BruteForceComplexityTests < Test::Unit::TestCase
         argument = 'a'
         expected = log2(26)
 
-        actual = brute_force_complexity(argument)
+        actual = compute_brute_force_complexity(argument)
 
         assert_equal expected, actual
     end
@@ -556,7 +556,7 @@ class BruteForceComplexityTests < Test::Unit::TestCase
         argument = 'A'
         expected = log2(26)
 
-        actual = brute_force_complexity(argument)
+        actual = compute_brute_force_complexity(argument)
 
         assert_equal expected, actual
     end
@@ -564,7 +564,7 @@ class BruteForceComplexityTests < Test::Unit::TestCase
         argument = '0'
         expected = log2(10)
 
-        actual = brute_force_complexity(argument)
+        actual = compute_brute_force_complexity(argument)
 
         assert_equal expected, actual
     end
@@ -572,7 +572,7 @@ class BruteForceComplexityTests < Test::Unit::TestCase
         argument = 'ab'
         expected = 2*log2(26)
 
-        actual = brute_force_complexity(argument)
+        actual = compute_brute_force_complexity(argument)
 
         assert_equal expected, actual
     end
@@ -580,7 +580,7 @@ class BruteForceComplexityTests < Test::Unit::TestCase
         argument = 'aA'
         expected = 4*log2(26)
 
-        actual = brute_force_complexity(argument)
+        actual = compute_brute_force_complexity(argument)
 
         assert_equal expected, actual
     end

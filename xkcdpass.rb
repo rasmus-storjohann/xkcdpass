@@ -7,8 +7,8 @@ require 'optparse'
 # Add option for adding misspellings, remove or duplicate single letters
 # Add option for stutter, find a syllable and repeat it several times
 # Add option for randomizing all option values, which contributes to internal complexity
-
-$verbose = :none
+# http://www.reddit.com/r/YouShouldKnow/comments/232uch/ysk_how_to_properly_choose_a_secure_password_the/cgte7lp
+# http://robinmessage.com/2014/03/why-bruce-schneier-is-wrong-about-passwords/
 
 class Application
     def main
@@ -43,7 +43,7 @@ class Application
             opts.on('-s', '--separator STRING', 'String used to separate words') do |separator|
                 options[:separator] = separator
             end
-            opts.on('-c', '--case CASE_MODE', "One of  'upper', 'lower', 'capitalize', 'alternate' or 'random'") do |mode|
+            opts.on('-c', '--case MODE', "One of  'upper', 'lower', 'capitalize', 'alternate' or 'random'") do |mode|
                 options[:case_mode] = mode.to_sym
             end
             opts.on('-n', '--numbers NUMBERS_MODE', "One of  'between' or 'inside'") do |mode|
@@ -52,11 +52,17 @@ class Application
             opts.on('-d', '--number_count NUMBER', 'How many nunbers in the string') do |number|
                 options[:number_count] = number.to_i
             end
-            opts.on('-d', '--stutter_count NUMBER', 'How many stutters in the string') do |number|
+            opts.on('-u', '--substitution MODE', "L3++er sub$tituti0n mode, one of 'none', 'some', 'lots'") do |mode|
+                options[:substitution] = mode.to_sym
+            end
+            opts.on('-q', '--substitution_count NUMBER', "Number of substitutions") do |number|
+                options[:substitution_count] = number.to_i
+            end
+            opts.on('-o', '--stutter_count NUMBER', 'How many stutters in the string') do |number|
                 options[:stutter_count] = number.to_i
             end
-            opts.on('-p', '--phrase_count COUNT', 'Number of pass phrases to generate') do |d|
-                options[:phrase_count] = d.to_i
+            opts.on('-p', '--phrase_count NUMBER', 'Number of pass phrases to generate') do |number|
+                options[:phrase_count] = number.to_i
             end
             opts.on('-v', '--verbose MODE', "One of 'none', 'some' and 'full'.") do |mode|
                 $verbose = mode.to_sym
@@ -66,7 +72,7 @@ class Application
         options[:case_mode] = build_case_modifier(options[:case_mode])
         options[:number_injector] = build_number_injector(options[:number_injector], options[:number_count])
         options[:stutter_injector] = build_stutter_injector(options[:stutter_count])
-        options[:letter_map] = LetterModifier.new(options[:letter_map], options[:letter_count])
+        options[:substitution] = build_letter_substituter(options[:substitution], options[:substitution_count])
         options
     end
     def default_options
@@ -79,8 +85,8 @@ class Application
             :number_count => 0,
             :stutter_injector => NullModifier.new,
             :stutter_count => 0,
-            #:letter_map => {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'},
-            :letter_map => NullModifier.new,
+            :substitution => NullModifier.new,
+            :substitution_count => 0,
             :letter_count => 0,
             :phrase_count => 1,
             :verbose => false
@@ -118,6 +124,17 @@ class Application
         return number unless number.instance_of? Fixnum
         StutterModifier.new(number)
     end
+    def build_letter_substituter(mode, substitution_count)
+        return mode unless mode.instance_of? Symbol
+        case mode
+        when :none
+            NullModifier.new
+        when :lots
+            LetterModifier.new(:lots, substitution_count)
+        else
+            LetterModifier.new(:some, substitution_count)
+        end
+    end
     def read_dictionary_file(filename)
         words = []
         File.open(filename, 'r') do |file|
@@ -146,7 +163,7 @@ class PassPhrase
         @random_source.entropy
     end
     def brute_force_complexity
-        brute_force_complexity(to_s)
+        compute_brute_force_complexity(to_s)
     end
     def report
         "Dictionary=#{dictionary_complexity.round(1)} BruteForce=#{brute_force_complexity.round(1)} Phrase='#{to_s}'"
@@ -155,14 +172,16 @@ class PassPhrase
         before = to_s
         yield
         after = to_s
-        puts "#{step} #{report}" if $verbose == :full && before != after
+        if $verbose == :full && before != after
+            puts "#{step} #{report}" 
+        end
     end
     def create_pass_phrase(options, wordlist)
         verbosity('Pick words:    ') { @words = random_words(wordlist, options[:word_count]) }
         verbosity('Add separator: ') { @separator = options[:separator] }
         verbosity('Add stutter:   ') { @words = options[:stutter_injector].mutate(@words, @random_source) }
         verbosity('Change case:   ') { @words = options[:case_mode].mutate(@words, @random_source) }
-        verbosity('Change letters:') { @words = options[:letter_map].mutate(@words, @random_source) }
+        verbosity('Change letters:') { @words = options[:substitution].mutate(@words, @random_source) }
         verbosity('Add digits:    ') { @words = options[:number_injector].mutate(@words, @random_source) }
     end
     def inject_stutters(stutter_count, stutter_injector)
@@ -193,19 +212,21 @@ class RandomSource
         n.times do
             offset = random(source.size)
             target << source.delete_at(offset)
+            break if source.empty?
         end
         target.sort
     end
 end
 
+# TODO this string has too many elements
 $SYMBOLS = '!@#$%^&*()-_=+{[}]:;"\'|\<,>.?/'
 
-def brute_force_complexity(string)
+def compute_brute_force_complexity(string)
     logs = 0
     logs += log2(('a'..'z').count) if string =~ /[a-z]/
     logs += log2(('A'..'Z').count) if string =~ /[A-Z]/
     logs += log2(('0'..'9').count) if string =~ /[0-9]/
-    logs += log2($SYMBOLS.count) if string =~ /#{$SYMBOLS}/
+    logs += log2($SYMBOLS.size) if string =~ /[^a-zA-Z0-9 ]/
     logs * string.length
 end
 
@@ -278,9 +299,18 @@ class AlternateCaseModifier < WordWiseModifier
 end
 
 class LetterModifier
-    def initialize(map, count)
-        @map = map || {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'}
+    def initialize(mode = :some, count)
         @count = count
+        case mode
+        when Hash
+            @map = mode
+        when :some
+            @map = {'a' => '@', 's' => '$'}
+        when :lots
+            @map = {'a' => '@', 'x' => '#', 's' => '$', 'i' => '!', 'c' => '(', 'd' => ')', 't' => '+'}
+        else
+            raise 'Unexpected argument to LetterModifier#initialize'
+        end
     end
     def mutate(words, random_source)
         offsets = random_source.pick_n_from_m(@count, words.length)
@@ -386,6 +416,7 @@ rescue Exception => exception
     if $verbose == :none
         puts exception.message
     else
+        puts exception.message
         puts exception.backtrace.join("\n\t")
     end
 end
