@@ -5,6 +5,9 @@ require 'test/unit/assertions.rb'
 require 'xkcdpass.rb'
 
 class RandomSourceMockBase
+    def entropy
+        1.0
+    end
     def pick_n_from_m(n, m)
         source = (0...m).to_a
         target = []

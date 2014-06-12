@@ -10,6 +10,8 @@ require 'optparse'
 # http://www.reddit.com/r/YouShouldKnow/comments/232uch/ysk_how_to_properly_choose_a_secure_password_the/cgte7lp
 # http://robinmessage.com/2014/03/why-bruce-schneier-is-wrong-about-passwords/
 
+$ONE_BILLION = 1000000000
+
 class Application
     def main
         options = parse_command_line_options
@@ -20,11 +22,6 @@ class Application
         options[:phrase_count].times do
             phrase = PassPhrase.new
             phrase.create_pass_phrase(options, wordlist)
-            if $verbose == :some
-                puts phrase.report
-            else
-                puts phrase
-            end
         end
     end
     def parse_command_line_options
@@ -64,8 +61,8 @@ class Application
             opts.on('-p', '--phrase_count NUMBER', 'Number of pass phrases to generate') do |number|
                 options[:phrase_count] = number.to_i
             end
-            opts.on('-v', '--verbose MODE', "One of 'none', 'some' and 'full'.") do |mode|
-                $verbose = mode.to_sym
+            opts.on('-v', '--verbose MODE', "One of 'terse', 'default' and 'verbose'.") do |mode|
+                options[:verbose] = mode.to_sym
             end
         end
         optionParser.parse!
@@ -73,6 +70,7 @@ class Application
         options[:number_injector] = build_number_injector(options[:number_injector], options[:number_count])
         options[:stutter_injector] = build_stutter_injector(options[:stutter_count])
         options[:substitution] = build_letter_substituter(options[:substitution], options[:substitution_count])
+        $verbose = build_logger(options[:verbose], options[:attacks_per_second])
         options
     end
     def default_options
@@ -89,8 +87,19 @@ class Application
             :substitution_count => 0,
             :letter_count => 0,
             :phrase_count => 1,
-            :verbose => false
+            :verbose => :default,
+            :attacks_per_second => $ONE_BILLION
         }
+    end
+    def build_logger(verbose, attacks_per_second)
+        case verbose
+        when :terse
+            TerseLogger.new(attacks_per_second)
+        when :default
+            DefaultLogger.new(attacks_per_second)
+        when :verbose
+            VerboseLogger.new(attacks_per_second)
+        end
     end
     def build_case_modifier(mode)
         return mode unless mode.instance_of? Symbol
@@ -149,24 +158,6 @@ class Application
     end
 end
 
-class PassPhraceReport
-    def initialize(pass_phrase)
-        @pass_phrase = pass_phrase
-    end
-    def dictionary_complexity
-       @pass_phrase.dictionary_complexity.round(1)
-    end
-    def brute_force_complexity
-        @pass_phrase.brute_force_complexity.round(1)
-    end
-    def phrase
-        @pass_phrase.to_s
-    end
-    def brief
-        "Dictionary=#{dictionary_complexity} BruteForce=#{brute_force_complexity} Phrase='#{phrase}'"
-    end
-end
-
 class PassPhrase
     attr_reader :words
     def initialize(random_source = nil)
@@ -195,12 +186,25 @@ class PassPhrase
         end
     end
     def create_pass_phrase(options, wordlist)
-        verbosity('Pick words:    ') { @words = random_words(wordlist, options[:word_count]) }
-        verbosity('Add separator: ') { @separator = options[:separator] }
-        verbosity('Add stutter:   ') { @words = options[:stutter_injector].mutate(@words, @random_source) }
-        verbosity('Change case:   ') { @words = options[:case_mode].mutate(@words, @random_source) }
-        verbosity('Change letters:') { @words = options[:substitution].mutate(@words, @random_source) }
-        verbosity('Add digits:    ') { @words = options[:number_injector].mutate(@words, @random_source) }
+        @words = random_words(wordlist, options[:word_count])
+        $verbose.log(self, 'Pick words')
+
+        @separator = options[:separator]
+        $verbose.log(self, 'Add separator')
+
+        @words = options[:stutter_injector].mutate(@words, @random_source)
+        $verbose.log(self, 'Add stutter')
+
+        @words = options[:case_mode].mutate(@words, @random_source)
+        $verbose.log(self, 'Change case')
+
+        @words = options[:substitution].mutate(@words, @random_source)
+        $verbose.log(self, 'Change letters')
+
+        @words = options[:number_injector].mutate(@words, @random_source)
+        $verbose.log(self, 'Add digits')
+
+        $verbose.print_final_result(self)
     end
     def inject_stutters(stutter_count, stutter_injector)
         stutter_injector.inject_stutters(@words, stutter_count, @random_source)
@@ -235,6 +239,86 @@ class RandomSource
         target.sort
     end
 end
+
+class LoggerBase
+    def initialize(attacks_per_second)
+        @attacks_per_second = attacks_per_second
+    end
+    def brief(pass_phrase, comment)
+        "#{comment}: Dictionary=#{dictionary_complexity(pass_phrase)} BruteForce=#{brute_force_complexity(pass_phrase)} Phrase='#{pass_phrase}'"
+    end
+    def full(pass_phrase, comment)
+        log = []
+        log << "Stage: #{comment}"
+        log << "Phrase: #{pass_phrase.to_s}"
+        log << "Dictionary attack:  #{dictionary_complexity(pass_phrase)} bits (longevity: #{dictionary_longevity(pass_phrase)})"
+        log << "Brute force attack: #{brute_force_complexity(pass_phrase)} bits (longevity: #{brute_force_longevity(pass_phrase)})"
+        log << ''
+        puts log.join("\n")
+    end
+    def dictionary_complexity(pass_phrase)
+       pass_phrase.dictionary_complexity.round(1)
+    end
+    def brute_force_complexity(pass_phrase)
+        pass_phrase.brute_force_complexity.round(1)
+    end
+    def dictionary_longevity(pass_phrase)
+       PassphraseLongevity.new(pass_phrase.dictionary_complexity, @attacks_per_second).to_s
+    end
+    def brute_force_longevity(pass_phrase)
+       PassphraseLongevity.new(pass_phrase.brute_force_complexity, @attacks_per_second).to_s
+    end
+    def phrase(pass_phrase)
+        @pass_phrase.to_s
+    end
+end
+
+class VerboseLogger < LoggerBase
+    def initialize(attacks_per_second)
+        super(attacks_per_second)
+    end
+    def log(pass_phrase, comment)
+        puts full(pass_phrase, comment)
+    end
+    def print_final_result(pass_phrase)
+        puts pass_phrase
+    end
+    def log_error(exception)
+        puts exception.message
+        puts exception.backtrace.join("\n\t")
+    end
+end
+
+class DefaultLogger < LoggerBase
+    def initialize(attacks_per_second)
+        super(attacks_per_second)
+    end
+    def log(pass_phrase, comment)
+        puts brief(pass_phrase, comment)
+    end
+    def print_final_result(pass_phrase)
+        puts pass_phrase
+    end
+    def log_error(exception)
+        puts exception.message
+    end
+end
+
+class TerseLogger < LoggerBase
+    def initialize(attacks_per_second)
+        super(attacks_per_second)
+    end
+    def log(pass_phrase, comment)
+    end
+    def print_final_result(pass_phrase)
+        puts brief(pass_phrase, 'Final')
+    end
+    def log_error(exception)
+        puts exception.message
+    end
+end
+
+$verbose = DefaultLogger.new($ONE_BILLION)
 
 # TODO this string has too many elements
 $SYMBOLS = '!@#$%^&*()-_=+{[}]:;"\'|\<,>.?/'
@@ -461,10 +545,5 @@ begin
 rescue SystemExit
     # ignore
 rescue Exception => exception
-    if $verbose == :none
-        puts exception.message
-    else
-        puts exception.message
-        puts exception.backtrace.join("\n\t")
-    end
+    $verbose.log_error(exception)
 end
