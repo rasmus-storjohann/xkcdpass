@@ -149,6 +149,24 @@ class Application
     end
 end
 
+class PassPhraceReport
+    def initialize(pass_phrase)
+        @pass_phrase = pass_phrase
+    end
+    def dictionary_complexity
+       @pass_phrase.dictionary_complexity.round(1)
+    end
+    def brute_force_complexity
+        @pass_phrase.brute_force_complexity.round(1)
+    end
+    def phrase
+        @pass_phrase.to_s
+    end
+    def brief
+        "Dictionary=#{dictionary_complexity} BruteForce=#{brute_force_complexity} Phrase='#{phrase}'"
+    end
+end
+
 class PassPhrase
     attr_reader :words
     def initialize(random_source = nil)
@@ -166,7 +184,7 @@ class PassPhrase
         compute_brute_force_complexity(to_s)
     end
     def report
-        "Dictionary=#{dictionary_complexity.round(1)} BruteForce=#{brute_force_complexity.round(1)} Phrase='#{to_s}'"
+        PassPhraceReport.new(self).brief
     end
     def verbosity(step)
         before = to_s
@@ -228,6 +246,36 @@ def compute_brute_force_complexity(string)
     logs += log2(('0'..'9').count) if string =~ /[0-9]/
     logs += log2($SYMBOLS.size) if string =~ /[^a-zA-Z0-9 ]/
     logs * string.length
+end
+
+class PassphraseLongevity
+    attr_reader :unit, :value
+    def initialize(bits, attacks_per_second)
+        @unit = :second
+        @value = 0
+        # TODO avoid this and do all the work in log space
+        attacks = Math.exp(Math.log(2)*bits)
+        seconds = attacks/attacks_per_second
+        results = []
+        [   { :unit => :seconds, :factor =>                    1 },
+            { :unit => :minutes, :factor =>                   60 },
+            { :unit => :hours, :factor =>                  60*60 },
+            { :unit => :days, :factor =>                24*60*60 },
+            { :unit => :weeks, :factor =>             7*24*60*60 },
+            { :unit => :months, :factor =>           30*24*60*60 },
+            { :unit => :years, :factor =>           365*24*60*60 },
+            { :unit => :millenia, :factor =>   1000*365*24*60*60 }
+        ].each do |conversion|
+            time = seconds / conversion[:factor]
+            if time >= 1
+                @unit = conversion[:unit]
+                @value = time
+            end
+        end
+    end
+    def to_s
+        "#{@value.round(1)} #{@unit}"
+    end
 end
 
 def log2(value)

@@ -535,6 +535,81 @@ class ComputedComplexityTests < Test::Unit::TestCase
     end
 end
 
+class PassphraseLongevityTests < Test::Unit::TestCase
+    def test_one_hundred_attacks_per_second
+        bits = log2(400)
+        attacks_per_second = 100
+        
+        actual = PassphraseLongevity.new(bits, attacks_per_second)
+        
+        assert_equal '4.0 seconds', actual.to_s
+    end
+    def test_two_seconds
+        bits = 1
+        attacks_per_second = 1
+        
+        actual = PassphraseLongevity.new(bits, attacks_per_second)
+        
+        assert_equal '2.0 seconds', actual.to_s
+    end
+    def test_two_minutes
+        bits = log2(60*2)
+        attacks_per_second = 1
+        
+        actual = PassphraseLongevity.new(bits, attacks_per_second)
+        
+        assert_equal '2.0 minutes', actual.to_s
+    end
+    def test_two_hours
+        bits = log2(60*60*2)
+        attacks_per_second = 1
+        
+        actual = PassphraseLongevity.new(bits, attacks_per_second)
+        
+        assert_equal '2.0 hours', actual.to_s
+    end
+    def test_two_day2
+        bits = log2(24*60*60*2)
+        attacks_per_second = 1
+        
+        actual = PassphraseLongevity.new(bits, attacks_per_second)
+        
+        assert_equal '2.0 days', actual.to_s
+    end
+    def test_two_week2
+        bits = log2(7*24*60*60*2)
+        attacks_per_second = 1
+        
+        actual = PassphraseLongevity.new(bits, attacks_per_second)
+        
+        assert_equal '2.0 weeks', actual.to_s
+    end
+    def test_two_month2
+        bits = log2(30*24*60*60*2)
+        attacks_per_second = 1
+        
+        actual = PassphraseLongevity.new(bits, attacks_per_second)
+        
+        assert_equal '2.0 months', actual.to_s
+    end
+    def test_two_years
+        bits = log2(365*24*60*60*2)
+        attacks_per_second = 1
+        
+        actual = PassphraseLongevity.new(bits, attacks_per_second)
+        
+        assert_equal '2.0 years', actual.to_s
+    end
+    def test_two_millenia
+        bits = log2(1000*365*24*60*60*2)
+        attacks_per_second = 1
+        
+        actual = PassphraseLongevity.new(bits, attacks_per_second)
+        
+        assert_equal '2.0 millenia', actual.to_s
+    end
+end
+
 class BruteForceComplexityTests < Test::Unit::TestCase
     def test_lower_empty_string
         argument = ''
