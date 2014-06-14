@@ -17,7 +17,7 @@ actually becomes at each stage.
 
 ## Dos and don'ts
 
-* DON'T memorize your passphrases.
+* DON'T memorize most of your your passphrases.
 * DO use a [password manager](http://lifehacker.com/5944969/which-password-manager-is-the-most-secure) 
   to generate and store passphrases. [Keepass](http://sourceforge.net/projects/keepassx/) and 
   [LastPass](https://lastpass.com/) are good alternatives for offline and online storage, respectively.
@@ -78,8 +78,8 @@ The passphrase generation starts by picking words at random from a word list. Th
 entropy of N*log2(M) bits, where N is the number of words in the passphrase and M is the number of 
 words in the word list. The longer the word list, the more bits you get for each word. However, a 
 very large word list will likely contain words that we don't know and therefore can't easily remember. 
-Ideally we should use a word list that matches your vocabulary. The sample dictionary included here 
-contains just over 1400 words, giving about 10 bits of entropy per word, while /usr/share/dict/words 
+Ideally we should use a word list that matches our vocabulary. The sample dictionary included here 
+contains just over 1,400 words, giving about 10 bits of entropy per word, while /usr/share/dict/words 
 on my linux system contains almost 73,000, giving about bits 16 per word.
 
 The basic passphrase may then be modified in various ways, with the goal of packinng more entropy
@@ -99,76 +99,72 @@ Here's an example of a short passphrase from a small word list, but with heavy m
 ```
 $ ./xkcdpass.rb --stutter_count 2 --number_count 1 --numbers inside --substitution lots -substitution_count 3 --case random --verbose verbose --file sample_dict.txt --separator $ --word_count 3
 Wordlist contains 1426 words, giving 10.5 bits per word
+Assuming 1.0 billion attacks per second when estimating longevity
 
 Stage: Pick words
-Phrase: perfect hand really
+Phrase: conditions require answer
 Dictionary attack:  31.4 bits (longevity: 2.9 seconds)
-Brute force attack: 89.3 bits (longevity: for ever)
-
-Stage: Add separator
-Phrase: perfect$hand$really
-Dictionary attack:  31.4 bits (longevity: 2.9 seconds)
-Brute force attack: 182.5 bits (longevity: for ever)
+Brute force attack: 117.5 bits (longevity: forever)
 
 Stage: Add stutter
-Phrase: peperfect$hand$reareally
-Dictionary attack:  37.0 bits (longevity: 2.3 minutes)
-Brute force attack: 230.6 bits (longevity: for ever)
+Phrase: cococonditions rererequire answer
+Dictionary attack:  38.6 bits (longevity: 7.0 minutes)
+Brute force attack: 155.1 bits (longevity: forever)
 
 Stage: Change case
-Phrase: peperfect$hand$Reareally
-Dictionary attack:  41.8 bits (longevity: 1.0 hours)
-Brute force attack: 343.4 bits (longevity: for ever)
-
-Stage: Change letters
-Phrase: peperfect$hand$Reareally
-Dictionary attack:  41.8 bits (longevity: 1.0 hours)
-Brute force attack: 343.4 bits (longevity: for ever)
+Phrase: cococonditions Rererequire ANSWER
+Dictionary attack:  43.4 bits (longevity: 3.1 hours)
+Brute force attack: 310.2 bits (longevity: forever)
 
 Stage: Add digits
-Phrase: p30eperfect$hand$Reareally
-Dictionary attack:  53.2 bits (longevity: 3.9 months)
-Brute force attack: 458.4 bits (longevity: for ever)
+Phrase: cococondi21tions Rererequire ANSWER
+Dictionary attack:  55.4 bits (longevity: 1.5 years)
+Brute force attack: 445.3 bits (longevity: forever)
 
-p30eperfect$hand$Reareally
+Stage: Add separator '$'
+Phrase: cococondi21tions$Rererequire$ANSWER
+Dictionary attack:  55.4 bits (longevity: 1.5 years)
+Brute force attack: 617.0 bits (longevity: forever)
+
+cococondi21tions$Rererequire$ANSWER
 ```
 
 Here's an example of a longer passphrase from a larger word list:
 
 ```
-$ ./xkcdpass.rb --number_count 1 --numbers between --substitution lots -substitution_count 16 --case random --verbose verbose --separator $ --word_count 4 --stutter_count 1 
+$ ./xkcdpass.rb --number_count 1 --numbers between --substitution lots --substitution_count 2 --case random --verbose verbose --separator $ --word_count 4 --stutter_count 1 
 Wordlist contains 72786 words, giving 16.2 bits per word
+Assuming 1.0 billion attacks per second when estimating longevity
 
 Stage: Pick words
-Phrase: scribble landing jabbed repertory
+Phrase: dieresis papooses niceties serpent
 Dictionary attack:  64.6 bits (longevity: 890.0 years)
-Brute force attack: 155.1 bits (longevity: for ever)
-
-Stage: Add separator
-Phrase: scribble$landing$jabbed$repertory
-Dictionary attack:  64.6 bits (longevity: 890.0 years)
-Brute force attack: 317.0 bits (longevity: for ever)
+Brute force attack: 159.8 bits (longevity: forever)
 
 Stage: Add stutter
-Phrase: scribble$landing$jabbed$rererepertory
+Phrase: dieresis papooseses niceties serpent
 Dictionary attack:  69.2 bits (longevity: 21.4 millenia)
-Brute force attack: 355.5 bits (longevity: for ever)
+Brute force attack: 169.2 bits (longevity: forever)
 
 Stage: Change case
-Phrase: Scribble$LANDING$jabbed$REREREPERTORY
-Dictionary attack:  75.5 bits (longevity: for ever)
-Brute force attack: 529.4 bits (longevity: for ever)
+Phrase: Dieresis papooseses niceties SERPENT
+Dictionary attack:  75.5 bits (longevity: forever)
+Brute force attack: 338.4 bits (longevity: forever)
 
 Stage: Change letters
-Phrase: Scribble$LANDING$jabbed$REREREPERTORY
-Dictionary attack:  75.5 bits (longevity: for ever)
-Brute force attack: 529.4 bits (longevity: for ever)
+Phrase: Dieresis papoo$e$e$ ni(etie$ SERPENT
+Dictionary attack:  88.1 bits (longevity: forever)
+Brute force attack: 515.1 bits (longevity: forever)
 
 Stage: Add digits
-Phrase: Scribble$LANDING$jabbed$52$REREREPERTORY
-Dictionary attack:  84.2 bits (longevity: for ever)
-Brute force attack: 705.2 bits (longevity: for ever)
+Phrase: Dieresis 7 papoo$e$e$ ni(etie$ SERPENT
+Dictionary attack:  96.8 bits (longevity: forever)
+Brute force attack: 669.9 bits (longevity: forever)
 
-Scribble$LANDING$jabbed$52$REREREPERTORY
+Stage: Add separator '$'
+Phrase: Dieresis$7$papoo$e$e$$ni(etie$$SERPENT
+Dictionary attack:  96.8 bits (longevity: forever)
+Brute force attack: 669.9 bits (longevity: forever)
 
+Dieresis$7$papoo$e$e$$ni(etie$$SERPENT
 ```

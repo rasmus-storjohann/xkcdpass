@@ -726,70 +726,70 @@ class IntegrationTests < Test::Unit::TestCase
     def test_default_behaviour
         expected = /^([a-zA-Z]+ ){4}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt -v none`.strip + ' '
 
         assert_match expected, actual
     end
     def test_word_count_short_option
         expected = /^([a-zA-Z]+ ){6}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt -w 6`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt -w 6 -v none`.strip + ' '
 
         assert_match expected, actual
     end
     def test_word_count_long_option
         expected = /^([a-zA-Z]+ ){6}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt --word_count 6`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt --word_count 6 -v none`.strip + ' '
 
         assert_match expected, actual
     end
     def test_word_count_long_option_truncated
         expected = /^([a-zA-Z]+ ){6}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt --word 6`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt --word 6 -v none`.strip + ' '
 
         assert_match expected, actual
     end
     def test_separator_string_short_option
         expected = /^([a-zA-Z]+X){4}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt -s X`.strip + 'X'
+        actual = `./xkcdpass.rb -f sample_dict.txt -s X -v none`.strip + 'X'
 
         assert_match expected, actual
     end
     def test_separator_string_long_option
         expected = /^([a-zA-Z]+yy){4}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt --separator yy`.strip + 'yy'
+        actual = `./xkcdpass.rb -f sample_dict.txt --separator yy -v none`.strip + 'yy'
 
         assert_match expected, actual
     end
     def test_case_upper_short_option
         expected = /^([A-Z]+ ){4}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt -c upper`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt -c upper -v none`.strip + ' '
 
         assert_match expected, actual
     end
     def test_case_upper_long_option
         expected = /^([A-Z]+ ){4}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt --case upper`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt --case upper -v none`.strip + ' '
 
         assert_match expected, actual
     end
     def test_case_lower
         expected = /^([a-z]+ ){4}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt -c lower`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt -c lower -v none`.strip + ' '
 
         assert_match expected, actual
     end
     def test_case_capitalize
         expected = /^([A-Z][a-z]* ){4}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt -c capitalize`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt -c capitalize -v none`.strip + ' '
 
         assert_match expected, actual
     end
@@ -797,28 +797,28 @@ class IntegrationTests < Test::Unit::TestCase
         expected_lower_case_first = /([a-z]+ [A-Z]+ ){2}$/
         expected_upper_case_first = /([A-Z]+ [a-z]+ ){2}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt -c alternate`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt -c alternate -v none`.strip + ' '
 
         assert (actual =~ expected_upper_case_first) || (actual =~ expected_lower_case_first)
     end
     def test_case_random
         expected = /^([A-Za-z]+ ){4}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt -c random`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt -c random -v none`.strip + ' '
 
         assert_match expected, actual
     end
     def test_numbers_between
         expected = /^(([A-Za-z]+ )|([0-9]+ ))+$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt -n between -d 2`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt -n between -d 2 -v none`.strip + ' '
 
         assert_match expected, actual
     end
     def test_numbers_inside
         expected = /^([A-Za-z0-9]+ ){4}$/
 
-        actual = `./xkcdpass.rb -f sample_dict.txt -n inside -d 2`.strip + ' '
+        actual = `./xkcdpass.rb -f sample_dict.txt -n inside -d 2 -v none`.strip + ' '
 
         assert_match expected, actual
     end

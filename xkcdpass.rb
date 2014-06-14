@@ -5,12 +5,10 @@ require 'optparse'
 # Plan: 
 # Add option for prepadding (string) and postpadding (string) which add zero entropy but non-zero haystack complexity
 # Add option for adding misspellings, remove or duplicate single letters
-# Add option for stutter, find a syllable and repeat it several times
-# Add option for randomizing all option values, which contributes to internal complexity
 # http://www.reddit.com/r/YouShouldKnow/comments/232uch/ysk_how_to_properly_choose_a_secure_password_the/cgte7lp
-# http://robinmessage.com/2014/03/why-bruce-schneier-is-wrong-about-passwords/
 
-$ONE_BILLION = 1000000000
+ONE_BILLION = 1000000000
+ONE_MILLION_YEARS = 1000 * 1000 * 365 * 24 * 60 * 60
 
 $HELP =<<END
 
@@ -29,7 +27,8 @@ class Application
     def main
         options = parse_command_line_options
         wordlist = read_dictionary_file(options[:file])
-        $output.message("Wordlist contains #{wordlist.size} words, giving #{log2(wordlist.size).round(1)} bits per word\n\n")
+        $output.message("Wordlist contains #{wordlist.size} words, giving #{log2(wordlist.size).round(1)} bits per word\n")
+        $output.message("Assuming #{options[:attacks_in_billions_per_second]} billion attacks per second when estimating longevity\n\n")
         options[:phrase_count].times do
             phrase = PassPhrase.new
             phrase.create_pass_phrase(options, wordlist)
@@ -74,7 +73,10 @@ class Application
             opts.on('-p', '--phrase_count NUMBER', 'Number of pass phrases to generate') do |number|
                 options[:phrase_count] = number.to_i
             end
-            opts.on('-v', '--verbose MODE', "One of 'terse', 'default' and 'verbose'.") do |mode|
+            opts.on('-a', '--attacks BILLIONS', "The estimated power of an attacker, default is 1.0, representing 1 billion attacks per second.") do |mode|
+                options[:attacks_in_billions_per_second] = mode.to_f
+            end
+            opts.on('-v', '--verbose MODE', "One of 'none', 'terse', 'default' and 'verbose'.") do |mode|
                 options[:verbose] = mode.to_sym
             end
         end
@@ -83,7 +85,7 @@ class Application
         options[:number_injector] = build_number_injector(options[:number_injector], options[:number_count])
         options[:stutter_injector] = build_stutter_injector(options[:stutter_count])
         options[:substitution] = build_letter_substituter(options[:substitution], options[:substitution_count])
-        $output = build_logger(options[:verbose], options[:attacks_per_second])
+        $output = build_logger(options[:verbose], ONE_BILLION * options[:attacks_in_billions_per_second])
         options
     end
     def default_options
@@ -100,12 +102,14 @@ class Application
             :substitution_count => 0,
             :letter_count => 0,
             :phrase_count => 1,
-            :verbose => :default,
-            :attacks_per_second => $ONE_BILLION
+            :attacks_in_billions_per_second => 1.0,
+            :verbose => :terse
         }
     end
     def build_logger(verbose, attacks_per_second)
         case verbose
+        when :none
+            NoneLogger.new(attacks_per_second)
         when :terse
             TerseLogger.new(attacks_per_second)
         when :default
@@ -193,21 +197,27 @@ class PassPhrase
     def create_pass_phrase(options, wordlist)
         @words = random_words(wordlist, options[:word_count])
         $output.log(self, 'Pick words')
-
-        @separator = options[:separator]
-        $output.log(self, 'Add separator')
-
+        previous_state = to_s
+        
         @words = options[:stutter_injector].mutate(@words, @random_source)
-        $output.log(self, 'Add stutter')
+        $output.log(self, 'Add stutter') if previous_state != to_s
+        previous_state = to_s
 
         @words = options[:case_mode].mutate(@words, @random_source)
-        $output.log(self, 'Change case')
+        $output.log(self, 'Change case') if previous_state != to_s
+        previous_state = to_s
 
         @words = options[:substitution].mutate(@words, @random_source)
-        $output.log(self, 'Change letters')
+        $output.log(self, 'Change letters') if previous_state != to_s
+        previous_state = to_s
 
         @words = options[:number_injector].mutate(@words, @random_source)
-        $output.log(self, 'Add digits')
+        $output.log(self, 'Add digits') if previous_state != to_s
+        previous_state = to_s
+
+        @separator = options[:separator]
+        $output.log(self, "Add separator '#{@separator}'") if previous_state != to_s
+        previous_state = to_s
 
         $output.print_final_result(self)
     end
@@ -331,7 +341,23 @@ class TerseLogger < LoggerBase
     end
 end
 
-$output = DefaultLogger.new($ONE_BILLION)
+class NoneLogger < LoggerBase
+    def initialize(attacks_per_second)
+        super(attacks_per_second)
+    end
+    def message(string)
+    end
+    def log(pass_phrase, comment)
+    end
+    def print_final_result(pass_phrase)
+        puts pass_phrase
+    end
+    def log_error(exception)
+        puts exception.message
+    end
+end
+
+$output = DefaultLogger.new(ONE_BILLION)
 
 $SYMBOLS = '!@#$%^&*()-_=+{[}]:;"\'|\<,>.?/'
 
@@ -348,15 +374,14 @@ class PassphraseLongevity
     def initialize(bits, attacks_per_second)
         attacks = Math.exp(Math.log(2) * bits)
         seconds = attacks / attacks_per_second
-        $one_million_years = 1000 * 1000 * 365 * 24 * 60 * 60
-        @forever = seconds > $one_million_years
+        @forever = seconds > ONE_MILLION_YEARS
         unless @forever
-            @unit = ''
-            @value = 0
             compute_longevity(seconds)
         end
     end
     def compute_longevity(seconds)
+        @unit = ''
+        @value = 0
         results = []
         [   { :unit => :milliseconds, :factor =>                 0.001 },
             { :unit => :seconds, :factor =>                          1 },
@@ -376,7 +401,7 @@ class PassphraseLongevity
         end
     end
     def to_s
-        @forever ? 'for ever' : "#{@value.round(1)} #{@unit}"
+        @forever ? 'forever' : "#{@value.round(1)} #{@unit}"
     end
 end
 
