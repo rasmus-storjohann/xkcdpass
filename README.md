@@ -1,45 +1,61 @@
-This is yet another tool for generating passphrases by the xkcd method. It pulls random words
-from a word list to generate a passphrase which is then modified to make strong passphrases 
-that are hard to guess and possible to remember.
+# xkcdpass
 
-First a piece of general advice: You should not memorize most of your passwords. Use a 
-password manager to store long arbitrary passphrases (e.g. $3Fzli2Bl")'AjZYm0,,Pz%) for 
-almost all your accounts, and memorize only the passphrase protecting your password manager, 
-your email and perhaps one or two other things. Use different passwords for each account.
-Keepass http://sourceforge.net/projects/keepassx/  and LastPass https://lastpass.com/ are 
-good alternatives for offline and online storage, respectively. These tools also generate 
-random passwords. However, some passwords you do need to remember, and that will not likely 
-change any timem soon.
+xkcdpass is yet another tool for generating passphrases by the [xkcd-936](http://xkcd.com/936/) 
+method. It pulls random words from a word list to generate a passphrase which is then modified 
+to make strong passphrases that are hard to guess and possible to remember. And yes, Bruce Schneier
+[doesn't like](https://www.schneier.com/blog/archives/2014/03/choosing_secure_1.html) xkcd-936, 
+well, it turns out even Bruce Schneier can be wrong.
+
+## TLDR
+
+xkcdpass generates passphrases by picking several words randomly from a word list, modifies 
+them using a standard bag of tricks such as change case, introduce digits, substitute symbols 
+for letters, etc. It then estimates the strength of the passphrases in terms of how long they 
+would stand up against simple brute force attack or a modern dictionary based attack. This 
+estimate is done after each type of modification, making clear how much stronger the passphrase 
+actually becomes at each stage.
+
+## Dos and don'ts
+
+* DON'T memorize your passphrases.
+* DO use a [password manager](http://lifehacker.com/5944969/which-password-manager-is-the-most-secure) 
+  to generate and store passphrases. [Keepass](http://sourceforge.net/projects/keepassx/) and 
+  [LastPass](https://lastpass.com/) are good alternatives for offline and online storage, respectively.
+* DO use different passphrases for each of your accounts.
+* DO use long random passphrases such as ```$3Fzli2Bl")'AjZYm0,,Pz%``` all acconts that you 
+  don't need to memorize.
+* DO use strong passphrases for the few accounts that you do need to memorize, probably your main email
+  account, your password manager and not much else.
+
+## Introduction
 
 Many methods have been proposed over the years to generate strong passwords. The shift 
-from passwords to passphrases has been encouraged in part by http://xkcd.com/936/. 
-However, as password attacks become more powerful and specifically designed to work against 
-dictionary based passphrases, the simple xkcd method has become insufficient, see e.g. 
-https://www.schneier.com/blog/archives/2012/09/recent_developm_1.html and 
-http://www.reddit.com/r/YouShouldKnow/comments/232uch. 
+from passwords to passphrases has been encouraged in part by [xkcd](http://xkcd.com/936/). 
+There is some controversy as to whether the xkcd-936 method is strong enough to
+stand up to modern [hardware based dictionary attacks](http://blog.mailchimp.com/3-billion-passwords-per-second-are-complex-passwords-enough-anymore/). 
+Bruce Schneier of significant renown in the computer security field 
+[came out against](https://www.schneier.com/blog/archives/2014/03/choosing_secure_1.html) the 
+xkcd method, and was [challenged](http://robinmessage.com/2014/03/why-bruce-schneier-is-wrong-about-passwords/).
+The debate ensuded on [reddit](http://www.reddit.com/r/YouShouldKnow/comments/232uch) and I'm sure
+in many other places.
 
-This tool uses the xkcd method as a starting point and adds several additional sources of 
-randomness that should help the resulting passphrases stand up better against attacks. 
+## Passphrase strenght estimation
 
-* Change the case of each word
-* Insert a separator string between the words
-* Insert random numbers between or within the words
-* Add "stutter" by repeating syllables
-* TODO Add spelling mistakes by repeating or omitting letters
-
-The tool estimates the strength of these passphrases against different types of attacks, 
-including how  much of the randomness in the resulting passphrases are due to each of these 
-modifications. This should  help us to think rationally about what tricks are more effective 
-than others at making passphrases that are both strong and memorable.
+xkcdpass can be used to help settle that debate. It has been implemented with the goal of 
+generating passphrases and estimate their strenght. In addition to computing the strength in 
+bits, which can be hard for non-specialists to really understand, it also represents the 
+strength of passphrases in terms of their longevity, i.e. how long it would take to break them, 
+assuming a given number of attacks per second. The default rate of attacks is 1 billion passwords 
+per second, which seems to be the ballpark figure for one off the shelf GPU hardware these days.
 
 Two methods are currently used to estimate the passphrase strength. First, as the passphrase
 is generated, the program keeps count of how many random numbers have been used, and the
 range for each. So a random number in the range from 0 to 100 contributes log2(100) bits to the
 entropy while a random number in the range from 0 to 5 contributes log2(5) bits. This is the 
-entropy of the passphrase. Secondly, the finished passphrase is analysed for "haystack" complexity 
-as outlined here https://www.grc.com/haystack.htm. 
+entropy of the passphrase. Secondly, the finished passphrase is analysed for brute force or
+["haystack" complexity](https://www.grc.com/haystack.htm).
 
-Each of these two complexity measures imply a different attack model. The haystack complexity 
+Each of these two complexity measures imply a different attack model. The brute force complexity 
 assumes a particular form of brute force attack, where every passphrase of length N is tried 
 before any of length N+1. Furthermore, every passphrase containing lower case letters only is tried 
 before any with lower+upper case letters, then lower+digits, then lower+symbols, then 
@@ -51,51 +67,108 @@ passphrase generation method, including this program, the options that were pass
 word list that was used. The only information not available to this hypothetical attacker is the 
 values of random numbers used to generate the passphrase. A real attacker will fall somewhere 
 between these extremes. Both measures are in the units of bits of information, and the entropy of a 
-passphrase will always be less than its haystack complexity.
+passphrase will always be less than its brute force complexity.
 
 I believe neither of these attack models are very realistic, and I'd be interested to figure
 out how to model likely attacks better in order to improve estimates of passphrase strengths.
 
-The entropy of the passphrase is computed as follows:
+## Passphrase generation
 
-* The word list file: The more words in the word list, the higher the complexity of
-  the passphrase. Each word in the passphrase contributes log2(N) bits of complexity, where
-  N is the number of words in the word list. Ideally you should use a word list that
-  matches your vocabulary, since you want it to be as large as possible but not so 
-  large that you need to memorize new words when memorizing your passphrase. The
-  sample dictionary included here contains just over 1400 words, while /usr/share/dict/words 
-  on my linux system contains almost 73,000.
+The passphrase generation starts by picking words at random from a word list. This gives a starting 
+entropy of N*log2(M) bits, where N is the number of words in the passphrase and M is the number of 
+words in the word list. The longer the word list, the more bits you get for each word. However, a 
+very large word list will likely contain words that we don't know and therefore can't easily remember. 
+Ideally we should use a word list that matches your vocabulary. The sample dictionary included here 
+contains just over 1400 words, giving about 10 bits of entropy per word, while /usr/share/dict/words 
+on my linux system contains almost 73,000, giving about bits 16 per word.
 
-* The length of the passphrase, i.e. the number of words, is the most important factor.
-  The contribution for an N-word phrase is N*log2(M) where M is the number of words in the
-  word list.
+The basic passphrase may then be modified in various ways, with the goal of packinng more entropy
+into it, while not making it too hard to remember. The possible variations are endless, the following 
+methods are currently supported by xkcdpass:
 
-* Separator character is inserted between the words. As this is a deterministic process,
-  it does not contribute to the entropy of the passphrase, but it is a nice way
-  to introduce special characters in the passphrase, which increases the haystack complexity.
-  You can also use a longer string here to increase the overall length of the password.
+* Insert arbitrary (user suplied, not random) strings between each word.
+* Change the case of each word, randomly or deterministically.
+* Substitute symbols for characters, the usual 3 for e, @ for a, etc.
+* Insert random numbers inside or between words.
+* Repeat syllables randomly to intrduce stutter patters that some may find easy to remember.
 
-* The case won't affect complexity very much. Most of the case modes are deterministic so 
-  they do nothing for the entropy but they do increase the haystack complexity
-  insofar as they ensure that the passphrase contains both upper and lower case letters.
-  The "random" mode randomly picks one of three possible capitalization modes for each 
-  word, giving about 1.5 bit of entropy per word. It would be possible to randomly
-  capitalize each letter, but I think that would be too hard to remember so I haven't
-  implemented it.
+# Examples
 
-* Inserting numbers in the passphrase has potential to increase the complexity, since any 
-  number less than 100 will add log2(100) or about 6.5 bits just for the value, plus any 
-  contribution from the random placement of the number. Numbers can be placed between words, 
-  at the end of the word (which amounts to pretty much the same thing, obviously) and within 
-  words. Placing the number between words contributes log2(N) where N is the number of words, 
-  whereas placing the number withing words contributes log2(M) where M is the number of letters, 
-  so its quite a bit more.
-  
-* Stutter modifications is the repetition of a randomly selected syllable in the passphrase.
-  This adds entropy for the selection of the syllable and the number of repetitions.
+Here's an example of a short passphrase from a small word list, but with heavy modification:
 
-* If you believe that a likely attack will involve trying shorter passphrase before longer
-  ones, then even very simple ways to make your passphrase longer will make it stronger, such
-  as padding at the beginning and/or end with a simple repeated character, such as *****. 
-  This idea is outlined in more detail here https://www.grc.com/haystack.htm. However, much 
-  like the separator character, padding does not contribute to the entropy of the passphrase.
+```
+$ ./xkcdpass.rb --stutter_count 2 --number_count 1 --numbers inside --substitution lots -substitution_count 3 --case random --verbose verbose --file sample_dict.txt --separator $ --word_count 3
+Wordlist contains 1426 words, giving 10.5 bits per word
+
+Stage: Pick words
+Phrase: perfect hand really
+Dictionary attack:  31.4 bits (longevity: 2.9 seconds)
+Brute force attack: 89.3 bits (longevity: for ever)
+
+Stage: Add separator
+Phrase: perfect$hand$really
+Dictionary attack:  31.4 bits (longevity: 2.9 seconds)
+Brute force attack: 182.5 bits (longevity: for ever)
+
+Stage: Add stutter
+Phrase: peperfect$hand$reareally
+Dictionary attack:  37.0 bits (longevity: 2.3 minutes)
+Brute force attack: 230.6 bits (longevity: for ever)
+
+Stage: Change case
+Phrase: peperfect$hand$Reareally
+Dictionary attack:  41.8 bits (longevity: 1.0 hours)
+Brute force attack: 343.4 bits (longevity: for ever)
+
+Stage: Change letters
+Phrase: peperfect$hand$Reareally
+Dictionary attack:  41.8 bits (longevity: 1.0 hours)
+Brute force attack: 343.4 bits (longevity: for ever)
+
+Stage: Add digits
+Phrase: p30eperfect$hand$Reareally
+Dictionary attack:  53.2 bits (longevity: 3.9 months)
+Brute force attack: 458.4 bits (longevity: for ever)
+
+p30eperfect$hand$Reareally
+```
+
+Here's an example of a longer passphrase from a larger word list:
+
+```
+$ ./xkcdpass.rb --number_count 1 --numbers between --substitution lots -substitution_count 16 --case random --verbose verbose --separator $ --word_count 4 --stutter_count 1 
+Wordlist contains 72786 words, giving 16.2 bits per word
+
+Stage: Pick words
+Phrase: scribble landing jabbed repertory
+Dictionary attack:  64.6 bits (longevity: 890.0 years)
+Brute force attack: 155.1 bits (longevity: for ever)
+
+Stage: Add separator
+Phrase: scribble$landing$jabbed$repertory
+Dictionary attack:  64.6 bits (longevity: 890.0 years)
+Brute force attack: 317.0 bits (longevity: for ever)
+
+Stage: Add stutter
+Phrase: scribble$landing$jabbed$rererepertory
+Dictionary attack:  69.2 bits (longevity: 21.4 millenia)
+Brute force attack: 355.5 bits (longevity: for ever)
+
+Stage: Change case
+Phrase: Scribble$LANDING$jabbed$REREREPERTORY
+Dictionary attack:  75.5 bits (longevity: for ever)
+Brute force attack: 529.4 bits (longevity: for ever)
+
+Stage: Change letters
+Phrase: Scribble$LANDING$jabbed$REREREPERTORY
+Dictionary attack:  75.5 bits (longevity: for ever)
+Brute force attack: 529.4 bits (longevity: for ever)
+
+Stage: Add digits
+Phrase: Scribble$LANDING$jabbed$52$REREREPERTORY
+Dictionary attack:  84.2 bits (longevity: for ever)
+Brute force attack: 705.2 bits (longevity: for ever)
+
+Scribble$LANDING$jabbed$52$REREREPERTORY
+
+```
