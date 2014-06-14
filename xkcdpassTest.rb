@@ -4,6 +4,8 @@ require 'test/unit'
 require 'test/unit/assertions.rb'
 require 'xkcdpass.rb'
 
+# TODO tests for all the logger classes
+
 class RandomSourceMockBase
     def entropy
         1.0

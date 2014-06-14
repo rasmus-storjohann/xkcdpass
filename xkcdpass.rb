@@ -12,13 +12,24 @@ require 'optparse'
 
 $ONE_BILLION = 1000000000
 
+$HELP =<<END
+
+Name: xkcdpass
+
+Description:
+    xkcdpass generates passphrases by picking several words randomly from a word list, modifies 
+    them using a standard bag of tricks such as change case, introduce digits, substitute symbols 
+    for letters, etc. It then estimates the strength of the passphrases in terms of how long they 
+    would stand up against simple brute force attack or a modern dictionary based attack. This 
+    estimate is done after each type of modification, making clear how much stronger the passphrase 
+    actually becomes at each stage. 
+END
+
 class Application
     def main
         options = parse_command_line_options
         wordlist = read_dictionary_file(options[:file])
-        if $verbose == :full
-            puts "wordlist contains #{wordlist.size} words, giving #{log2(wordlist.size)} bits per word"
-        end
+        $output.message("Wordlist contains #{wordlist.size} words, giving #{log2(wordlist.size).round(1)} bits per word\n\n")
         options[:phrase_count].times do
             phrase = PassPhrase.new
             phrase.create_pass_phrase(options, wordlist)
@@ -28,7 +39,9 @@ class Application
         options = default_options
         optionParser = OptionParser.new do|opts|
             opts.on('-h', '--help', 'Display this screen' ) do
+                puts $HELP
                 puts opts
+                puts
                 exit
             end
             opts.on('-f', '--file FILE', 'Dictionary file to use') do |file|
@@ -70,7 +83,7 @@ class Application
         options[:number_injector] = build_number_injector(options[:number_injector], options[:number_count])
         options[:stutter_injector] = build_stutter_injector(options[:stutter_count])
         options[:substitution] = build_letter_substituter(options[:substitution], options[:substitution_count])
-        $verbose = build_logger(options[:verbose], options[:attacks_per_second])
+        $output = build_logger(options[:verbose], options[:attacks_per_second])
         options
     end
     def default_options
@@ -177,34 +190,26 @@ class PassPhrase
     def report
         PassPhraceReport.new(self).brief
     end
-    def verbosity(step)
-        before = to_s
-        yield
-        after = to_s
-        if $verbose == :full && before != after
-            puts "#{step} #{report}" 
-        end
-    end
     def create_pass_phrase(options, wordlist)
         @words = random_words(wordlist, options[:word_count])
-        $verbose.log(self, 'Pick words')
+        $output.log(self, 'Pick words')
 
         @separator = options[:separator]
-        $verbose.log(self, 'Add separator')
+        $output.log(self, 'Add separator')
 
         @words = options[:stutter_injector].mutate(@words, @random_source)
-        $verbose.log(self, 'Add stutter')
+        $output.log(self, 'Add stutter')
 
         @words = options[:case_mode].mutate(@words, @random_source)
-        $verbose.log(self, 'Change case')
+        $output.log(self, 'Change case')
 
         @words = options[:substitution].mutate(@words, @random_source)
-        $verbose.log(self, 'Change letters')
+        $output.log(self, 'Change letters')
 
         @words = options[:number_injector].mutate(@words, @random_source)
-        $verbose.log(self, 'Add digits')
+        $output.log(self, 'Add digits')
 
-        $verbose.print_final_result(self)
+        $output.print_final_result(self)
     end
     def inject_stutters(stutter_count, stutter_injector)
         stutter_injector.inject_stutters(@words, stutter_count, @random_source)
@@ -277,6 +282,9 @@ class VerboseLogger < LoggerBase
     def initialize(attacks_per_second)
         super(attacks_per_second)
     end
+    def message(string)
+        puts string
+    end
     def log(pass_phrase, comment)
         puts full(pass_phrase, comment)
     end
@@ -293,6 +301,9 @@ class DefaultLogger < LoggerBase
     def initialize(attacks_per_second)
         super(attacks_per_second)
     end
+    def message(string)
+        puts string
+    end
     def log(pass_phrase, comment)
         puts brief(pass_phrase, comment)
     end
@@ -308,6 +319,8 @@ class TerseLogger < LoggerBase
     def initialize(attacks_per_second)
         super(attacks_per_second)
     end
+    def message(string)
+    end
     def log(pass_phrase, comment)
     end
     def print_final_result(pass_phrase)
@@ -318,9 +331,8 @@ class TerseLogger < LoggerBase
     end
 end
 
-$verbose = DefaultLogger.new($ONE_BILLION)
+$output = DefaultLogger.new($ONE_BILLION)
 
-# TODO this string has too many elements
 $SYMBOLS = '!@#$%^&*()-_=+{[}]:;"\'|\<,>.?/'
 
 def compute_brute_force_complexity(string)
@@ -333,22 +345,28 @@ def compute_brute_force_complexity(string)
 end
 
 class PassphraseLongevity
-    attr_reader :unit, :value
     def initialize(bits, attacks_per_second)
-        @unit = :second
-        @value = 0
-        # TODO avoid this and do all the work in log space
-        attacks = Math.exp(Math.log(2)*bits)
-        seconds = attacks/attacks_per_second
+        attacks = Math.exp(Math.log(2) * bits)
+        seconds = attacks / attacks_per_second
+        $one_million_years = 1000 * 1000 * 365 * 24 * 60 * 60
+        @forever = seconds > $one_million_years
+        unless @forever
+            @unit = ''
+            @value = 0
+            compute_longevity(seconds)
+        end
+    end
+    def compute_longevity(seconds)
         results = []
-        [   { :unit => :seconds, :factor =>                    1 },
-            { :unit => :minutes, :factor =>                   60 },
-            { :unit => :hours, :factor =>                  60*60 },
-            { :unit => :days, :factor =>                24*60*60 },
-            { :unit => :weeks, :factor =>             7*24*60*60 },
-            { :unit => :months, :factor =>           30*24*60*60 },
-            { :unit => :years, :factor =>           365*24*60*60 },
-            { :unit => :millenia, :factor =>   1000*365*24*60*60 }
+        [   { :unit => :milliseconds, :factor =>                 0.001 },
+            { :unit => :seconds, :factor =>                          1 },
+            { :unit => :minutes, :factor =>                         60 },
+            { :unit => :hours, :factor =>                      60 * 60 },
+            { :unit => :days, :factor =>                  24 * 60 * 60 },
+            { :unit => :weeks, :factor =>             7 * 24 * 60 * 60 },
+            { :unit => :months, :factor =>           30 * 24 * 60 * 60 },
+            { :unit => :years, :factor =>           365 * 24 * 60 * 60 },
+            { :unit => :millenia, :factor => 1000 * 365 * 24 * 60 * 60 }
         ].each do |conversion|
             time = seconds / conversion[:factor]
             if time >= 1
@@ -358,12 +376,18 @@ class PassphraseLongevity
         end
     end
     def to_s
-        "#{@value.round(1)} #{@unit}"
+        @forever ? 'for ever' : "#{@value.round(1)} #{@unit}"
     end
 end
 
 def log2(value)
-    Math.log(value)/Math.log(2)
+    Math.log(value) / Math.log(2)
+end
+
+class NullModifier
+    def mutate(words, random_source)
+        words
+    end
 end
 
 class WordWiseModifier
@@ -371,12 +395,6 @@ class WordWiseModifier
         words.map do |word|
             mutate_word(word, random_source)
         end
-    end
-end
-
-class NullModifier
-    def mutate(words, random_source)
-        words
     end
 end
 
@@ -545,5 +563,5 @@ begin
 rescue SystemExit
     # ignore
 rescue Exception => exception
-    $verbose.log_error(exception)
+    $output.log_error(exception)
 end
