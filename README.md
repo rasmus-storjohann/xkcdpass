@@ -17,7 +17,7 @@ actually becomes at each stage.
 
 ## Dos and don'ts
 
-* DON'T memorize most of your your passphrases.
+* DON'T memorize most of your passphrases.
 * DO use a [password manager](http://lifehacker.com/5944969/which-password-manager-is-the-most-secure) 
   to generate and store passphrases. [Keepass](http://sourceforge.net/projects/keepassx/) and 
   [LastPass](https://lastpass.com/) are good alternatives for offline and online storage, respectively.

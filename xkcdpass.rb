@@ -90,7 +90,7 @@ class Application
     end
     def default_options
         {
-            :file => '/usr/share/dict/words',
+            :file => 'wordlists/american-40.txt',
             :word_count => 4,
             :separator => ' ',
             :case_mode => NullModifier.new,
@@ -165,9 +165,12 @@ class Application
         words = []
         File.open(filename, 'r') do |file|
             while (line = file.gets)
-                line.strip!
-                if line =~ /^[a-zA-Z]+$/
-                    words << line
+                begin
+                    line.strip!
+                    if line =~ /^[a-zA-Z]+$/
+                        words << line
+                    end
+                rescue
                 end
             end
         end
