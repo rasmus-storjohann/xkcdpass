@@ -76,7 +76,7 @@ class Application
             opts.on('-a', '--attacks BILLIONS', "The estimated power of an attacker, default is 1.0, representing 1 billion attacks per second.") do |mode|
                 options[:attacks_in_billions_per_second] = mode.to_f
             end
-            opts.on('-v', '--verbose MODE', "One of 'none', 'terse', 'default' and 'verbose'.") do |mode|
+            opts.on('-v', '--verbose MODE', "One of 'silent', 'terse', 'default' and 'report'.") do |mode|
                 options[:verbose] = mode.to_sym
             end
         end
@@ -103,19 +103,19 @@ class Application
             :letter_count => 0,
             :phrase_count => 1,
             :attacks_in_billions_per_second => 1.0,
-            :verbose => :terse
+            :verbose => :default
         }
     end
     def build_logger(verbose, attacks_per_second)
         case verbose
-        when :none
-            NoneLogger.new(attacks_per_second)
+        when :silent
+            SilentLogger.new(attacks_per_second)
         when :terse
             TerseLogger.new(attacks_per_second)
         when :default
             DefaultLogger.new(attacks_per_second)
-        when :verbose
-            VerboseLogger.new(attacks_per_second)
+        when :report
+            ReportLogger.new(attacks_per_second)
         end
     end
     def build_case_modifier(mode)
@@ -288,7 +288,7 @@ class LoggerBase
     end
 end
 
-class VerboseLogger < LoggerBase
+class ReportLogger < LoggerBase
     def initialize(attacks_per_second)
         super(attacks_per_second)
     end
@@ -341,7 +341,7 @@ class TerseLogger < LoggerBase
     end
 end
 
-class NoneLogger < LoggerBase
+class SilentLogger < LoggerBase
     def initialize(attacks_per_second)
         super(attacks_per_second)
     end

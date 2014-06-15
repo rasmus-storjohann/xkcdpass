@@ -1,21 +1,48 @@
 # xkcdpass
 
 xkcdpass is yet another tool for generating passphrases by the [xkcd-936](http://xkcd.com/936/) 
-method. It pulls random words from a word list to generate a passphrase which is then modified 
-to make strong passphrases that are hard to guess and possible to remember. And yes, Bruce Schneier
-[doesn't like](https://www.schneier.com/blog/archives/2014/03/choosing_secure_1.html) xkcd-936, 
-well, it turns out even Bruce Schneier can be wrong.
-
-## TLDR
-
-xkcdpass generates passphrases by picking several words randomly from a word list, modifies 
-them using a standard bag of tricks such as change case, introduce digits, substitute symbols 
-for letters, etc. It then estimates the strength of the passphrases in terms of how long they 
-would stand up against simple brute force attack or a modern dictionary based attack. This 
+method. It generates passphrases by picking several words randomly from a word list, optionally 
+modifies them using a standard bag of tricks such as change case, introduce digits, substitute 
+symbols for letters, etc. It then estimates the strength of the passphrases in terms of how long 
+they would stand up against simple brute force attack or a modern dictionary based attack. This 
 estimate is done after each type of modification, making clear how much stronger the passphrase 
 actually becomes at each stage.
 
+# Bruce Schneier's objection
+
+Bruce Schneier [doesn't like](https://www.schneier.com/blog/archives/2014/03/choosing_secure_1.html) 
+xkcd-936. Well, it turns out even Bruce Schneier can be wrong, and this is why: 
+
+Say you have a word list of 50,000 words. We cannot rely on security through obscurity, so we assume 
+that the attacker has the same word list and knows how you generate your passphrases from it. We also
+assume that the attacker can try 1 billion candidate passphrases per second.
+
+Pick **one random word** from that list as your passphrase. The attacker has to try each word in the list 
+in order to crack your passphrase. On average he gets half-way through the list before he finds the 
+word you used, giving 25,000 tries, which at a billion tries per second takes him 0.000025 seconds. 
+No good.
+
+Now let's try with **two random words**. The attacker now has to try each possible *pair* of words in the list. 
+There are 50,000 squared = 2.5 billion such pairs. On average he has to try half of these before he gets 
+a hit, so 1.25 billion tries which takes 1.25 seconds. Still no good.
+
+Try with **three random words**. The number of combinations is now 50,000 cubed or 125 trillion. Using 
+the same math we can compute that it will take 17.36 hours to crack. Things are starting to look up a 
+little bit.
+
+What about **four words** picked at random? The number of combinations is now 50,000 to the fourth power,
+which is 6.25e+18, or 625 with sixteen zeroes after it. At a billion tries per second, it will take on 
+average 99 years to crack this passphrase. 
+
+So with no security through obscurity (the attacker has the word list and the details of how the 
+passphrase was generated), no mis-spellings or special characters, and an unrelenting cracking effort at 
+1 billion attempts per second, a four word passphrase like "exasperated profusions homeliest crags" 
+would last on average 99 years. In case you're wondering, for 5, 6 or 7 words, the corresponding values 
+are 4,954 millenia, 247,732,749 millenia and 12,386,637,493,658 millenia.
+
 ## Dos and don'ts
+
+Here are some simple dos and don'ts for how to manage passwords for most accounts
 
 * DON'T memorize most of your passphrases.
 * DO use a [password manager](http://lifehacker.com/5944969/which-password-manager-is-the-most-secure) 
@@ -26,18 +53,6 @@ actually becomes at each stage.
   don't need to memorize.
 * DO use strong passphrases for the few accounts that you do need to memorize, probably your main email
   account, your password manager and not much else.
-
-## Introduction
-
-Many methods have been proposed over the years to generate strong passwords. The shift 
-from passwords to passphrases has been encouraged in part by [xkcd](http://xkcd.com/936/). 
-There is some controversy as to whether the xkcd-936 method is strong enough to
-stand up to modern [hardware based dictionary attacks](http://blog.mailchimp.com/3-billion-passwords-per-second-are-complex-passwords-enough-anymore/). 
-Bruce Schneier of significant renown in the computer security field 
-[came out against](https://www.schneier.com/blog/archives/2014/03/choosing_secure_1.html) the 
-xkcd method, and was [challenged](http://robinmessage.com/2014/03/why-bruce-schneier-is-wrong-about-passwords/).
-The debate ensuded on [reddit](http://www.reddit.com/r/YouShouldKnow/comments/232uch) and I'm sure
-in many other places.
 
 ## Passphrase strenght estimation
 
