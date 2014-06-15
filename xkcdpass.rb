@@ -1,6 +1,7 @@
 #!/usr/bin/ruby
 
 require 'optparse'
+require 'securerandom'
 
 # Plan: 
 # Add option for prepadding (string) and postpadding (string) which add zero entropy but non-zero haystack complexity
@@ -244,7 +245,7 @@ class RandomSource
     end
     def random(max)
         @entropy += log2(max)
-        return (max * rand()).to_i
+        SecureRandom.random_number(max)
     end
     def pick_n_from_m(n, m)
         source = (0...m).to_a
