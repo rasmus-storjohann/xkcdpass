@@ -76,15 +76,9 @@ out how to model likely attacks better in order to improve estimates of passphra
 
 The passphrase generation starts by picking words at random from a word list. This gives a starting 
 entropy of N*log2(M) bits, where N is the number of words in the passphrase and M is the number of 
-words in the word list. The longer the word list, the more bits you get for each word. However, a 
-very large word list will likely contain words that we don't know and therefore can't easily remember. 
-Ideally we should use a word list that matches our vocabulary. The sample dictionary included here 
-contains just over 1,400 words, giving about 10 bits of entropy per word, while /usr/share/dict/words 
-on my linux system contains almost 73,000, giving about bits 16 per word.
-
-The basic passphrase may then be modified in various ways, with the goal of packinng more entropy
-into it, while not making it too hard to remember. The possible variations are endless, the following 
-methods are currently supported by xkcdpass:
+words in the word list. The basic passphrase may then be modified 
+in various ways, with the goal of packinng more entropy into it, while not making it too hard to remember. 
+The possible variations are endless, the following methods are currently supported by xkcdpass:
 
 * Insert arbitrary (user suplied, not random) strings between each word.
 * Change the case of each word, randomly or deterministically.
@@ -92,79 +86,110 @@ methods are currently supported by xkcdpass:
 * Insert random numbers inside or between words.
 * Repeat syllables randomly to intrduce stutter patters that some may find easy to remember.
 
+# Word lists
+
+There are several wordlists included, generated from the [SCOWL project](http://wordlist.aspell.net/). 
+The longer the word list, the more bits you get for each word. However, a very large word list will 
+likely contain words that you don't know and therefore can't easily remember. Ideally you should use a 
+word list that matches our vocabulary:
+
+| word list       | word count | bits per word | longevity for a 4 word passphrase  |
+|:----------------|-----------:|--------------:|-----------------------------------:|
+| american-40.txt |      44562 |          15.4 |                        125.0 years |
+| american-50.txt |      72071 |          16.1 |                        855.5 years |
+| british-40.txt  |      44614 |          15.4 |                        125.6 years |
+| british-50.txt  |      72130 |          16.1 |                        858.3 years |
+| canadian-40.txt |      44586 |          15.4 |                        125.3 years |
+| canadian-50.txt |      72100 |          16.1 |                        856.9 years |
+
+Example of words from each word list:
+
+* **american-40.txt**: blindly snowballs spoons immigrate chunky concentration taxation gamest replicating 
+    slummer kid poisons peeves cleaner pus cackled dwarfed summons acoustic earplugs
+* **american-50.txt**: is Garibaldi bestiality chatty adjudicators precisely greats snorkeling briefcase 
+    captor metaphysical deft skewing purged Curtis indentation harden appeaser predilections timider
+* **british-40.txt**: keened capsules crackdowns appeasement keynote excising rustiest inattention mewed 
+    inattention unlike stray gentile requesting courtships bookkeeping catcall chipmunk handcuffing sparks
+* **british-50.txt**: Jerry appointee Brahmaputra Brunelleschi Irrawaddy slum Maseru tricepses gladiolas 
+    socialism elongate assimilates uneasiness promiscuous clownishness swigs outstretches symbioses mussels Kirby
+* **canadian-40.txt**: reciprocates losses dearly stubborn frostbiting varieties toasting fezzes swivelling 
+    bakery stated homering purposing untruer alerts kinder reincarnates amounts idioms logger
+* **canadian-50.txt**: auspiciously tutors fates Lakshmi elm theme involvements mama means algebraically 
+    qualification disaffects discommoding discords drastic arborvitae sunnier intermarriages Safeway meteorite
+
 # Examples
 
 Here's an example of a short passphrase from a small word list, but with heavy modification:
 
 ```
-$ ./xkcdpass.rb --stutter_count 2 --number_count 1 --numbers inside --substitution lots -substitution_count 3 --case random --verbose verbose --file sample_dict.txt --separator $ --word_count 3
-Wordlist contains 1426 words, giving 10.5 bits per word
+$ ./xkcdpass.rb --stutter_count 2 --number_count 1 --numbers inside --substitution lots -substitution_count 3 --case random --verbose verbose --file wordlists/canadian-30.txt --separator $ --word_count 3
+Wordlist contains 10932 words, giving 13.4 bits per word
 Assuming 1.0 billion attacks per second when estimating longevity
 
 Stage: Pick words
-Phrase: conditions require answer
-Dictionary attack:  31.4 bits (longevity: 2.9 seconds)
-Brute force attack: 117.5 bits (longevity: forever)
+Phrase: responsibilities pushing functionality
+Dictionary attack:  40.2 bits (longevity: 21.8 minutes)
+Brute force attack: 178.6 bits (longevity: forever)
 
 Stage: Add stutter
-Phrase: cococonditions rererequire answer
-Dictionary attack:  38.6 bits (longevity: 7.0 minutes)
-Brute force attack: 155.1 bits (longevity: forever)
+Phrase: responsibilities pushishing functionctionctionality
+Dictionary attack:  47.8 bits (longevity: 2.9 days)
+Brute force attack: 239.7 bits (longevity: forever)
 
 Stage: Change case
-Phrase: cococonditions Rererequire ANSWER
-Dictionary attack:  43.4 bits (longevity: 3.1 hours)
-Brute force attack: 310.2 bits (longevity: forever)
+Phrase: responsibilities PUSHISHING functionctionctionality
+Dictionary attack:  52.6 bits (longevity: 2.6 months)
+Brute force attack: 479.4 bits (longevity: forever)
 
 Stage: Add digits
-Phrase: cococondi21tions Rererequire ANSWER
-Dictionary attack:  55.4 bits (longevity: 1.5 years)
-Brute force attack: 445.3 bits (longevity: forever)
+Phrase: res43ponsibilities PUSHISHING functionctionctionality
+Dictionary attack:  64.8 bits (longevity: 1.0 millenia)
+Brute force attack: 674.3 bits (longevity: forever)
 
 Stage: Add separator '$'
-Phrase: cococondi21tions$Rererequire$ANSWER
-Dictionary attack:  55.4 bits (longevity: 1.5 years)
-Brute force attack: 617.0 bits (longevity: forever)
+Phrase: res43ponsibilities$PUSHISHING$functionctionctionality
+Dictionary attack:  64.8 bits (longevity: 1.0 millenia)
+Brute force attack: 934.4 bits (longevity: forever)
 
-cococondi21tions$Rererequire$ANSWER
+res43ponsibilities$PUSHISHING$functionctionctionality
 ```
 
 Here's an example of a longer passphrase from a larger word list:
 
 ```
-$ ./xkcdpass.rb --number_count 1 --numbers between --substitution lots --substitution_count 2 --case random --verbose verbose --separator $ --word_count 4 --stutter_count 1 
-Wordlist contains 72786 words, giving 16.2 bits per word
+$ ./xkcdpass.rb --number_count 1 --numbers between --substitution lots --substitution_count 2 --case random --verbose verbose --file wordlists/canadian-40.txt --separator $ --word_count 4 --stutter_count 1 
+Wordlist contains 44586 words, giving 15.4 bits per word
 Assuming 1.0 billion attacks per second when estimating longevity
 
 Stage: Pick words
-Phrase: dieresis papooses niceties serpent
-Dictionary attack:  64.6 bits (longevity: 890.0 years)
-Brute force attack: 159.8 bits (longevity: forever)
+Phrase: accommodated playthings handgun junkie
+Dictionary attack:  61.8 bits (longevity: 125.3 years)
+Brute force attack: 178.6 bits (longevity: forever)
 
 Stage: Add stutter
-Phrase: dieresis papooseses niceties serpent
-Dictionary attack:  69.2 bits (longevity: 21.4 millenia)
-Brute force attack: 169.2 bits (longevity: forever)
+Phrase: accommodated playthings handgun jujujunkie
+Dictionary attack:  64.8 bits (longevity: 1.0 millenia)
+Brute force attack: 197.4 bits (longevity: forever)
 
 Stage: Change case
-Phrase: Dieresis papooseses niceties SERPENT
-Dictionary attack:  75.5 bits (longevity: forever)
-Brute force attack: 338.4 bits (longevity: forever)
+Phrase: ACCOMMODATED PLAYTHINGS Handgun jujujunkie
+Dictionary attack:  71.1 bits (longevity: 81.2 millenia)
+Brute force attack: 394.8 bits (longevity: forever)
 
 Stage: Change letters
-Phrase: Dieresis papoo$e$e$ ni(etie$ SERPENT
-Dictionary attack:  88.1 bits (longevity: forever)
-Brute force attack: 515.1 bits (longevity: forever)
+Phrase: @((OMMOD@TE) PLAYTHINGS Handgun jujujunkie
+Dictionary attack:  82.7 bits (longevity: forever)
+Brute force attack: 600.9 bits (longevity: forever)
 
 Stage: Add digits
-Phrase: Dieresis 7 papoo$e$e$ ni(etie$ SERPENT
-Dictionary attack:  96.8 bits (longevity: forever)
-Brute force attack: 669.9 bits (longevity: forever)
+Phrase: 75 @((OMMOD@TE) PLAYTHINGS Handgun jujujunkie
+Dictionary attack:  91.3 bits (longevity: forever)
+Brute force attack: 793.3 bits (longevity: forever)
 
 Stage: Add separator '$'
-Phrase: Dieresis$7$papoo$e$e$$ni(etie$$SERPENT
-Dictionary attack:  96.8 bits (longevity: forever)
-Brute force attack: 669.9 bits (longevity: forever)
+Phrase: 75$@((OMMOD@TE)$PLAYTHINGS$Handgun$jujujunkie
+Dictionary attack:  91.3 bits (longevity: forever)
+Brute force attack: 793.3 bits (longevity: forever)
 
-Dieresis$7$papoo$e$e$$ni(etie$$SERPENT
+75$@((OMMOD@TE)$PLAYTHINGS$Handgun$jujujunkie
 ```
