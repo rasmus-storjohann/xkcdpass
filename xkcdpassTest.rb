@@ -722,6 +722,94 @@ class CreatePassPhraseTests < Test::Unit::TestCase
     end
 end
 
+class MockPassPhrase
+    attr_reader :dictionary_complexity, :brute_force_complexity
+    def initialize(dictionary_complexity, brute_force_complexity, passphrase)
+        @dictionary_complexity = dictionary_complexity
+        @brute_force_complexity = brute_force_complexity
+        @passphrase = passphrase
+    end
+    def to_s
+        @passphrase
+    end
+end
+
+class LoggerBaseTests < Test::Unit::TestCase
+    def test_dictionary_complexity
+        attacks_per_second = 1
+        dictionary_complexity = 2
+        brute_force_complexity = 4
+        logger = LoggerBase.new(attacks_per_second)
+        pass_phrase = MockPassPhrase.new(dictionary_complexity, brute_force_complexity, '')
+        expected = 2.0
+        
+        actual = logger.dictionary_complexity(pass_phrase)
+        
+        assert_equal expected, actual        
+    end
+    def test_brute_force_complexity
+        attacks_per_second = 1
+        dictionary_complexity = 2
+        brute_force_complexity = 4
+        logger = LoggerBase.new(attacks_per_second)
+        pass_phrase = MockPassPhrase.new(dictionary_complexity, brute_force_complexity, '')
+        expected = 4.0
+        
+        actual = logger.brute_force_complexity(pass_phrase)
+        
+        assert_equal expected, actual        
+    end
+    def test_dictionary_longevity
+        attacks_per_second = 1
+        dictionary_complexity = 2
+        brute_force_complexity = 4
+        logger = LoggerBase.new(attacks_per_second)
+        pass_phrase = MockPassPhrase.new(dictionary_complexity, brute_force_complexity, '')
+        expected = "4.0 seconds"
+        
+        actual = logger.dictionary_longevity(pass_phrase)
+        
+        assert_equal expected, actual        
+    end
+    def test_brute_force_longevity
+        attacks_per_second = 1
+        dictionary_complexity = 2
+        brute_force_complexity = 4
+        logger = LoggerBase.new(attacks_per_second)
+        pass_phrase = MockPassPhrase.new(dictionary_complexity, brute_force_complexity, '')
+        expected = "16.0 seconds"
+        
+        actual = logger.brute_force_longevity(pass_phrase)
+        
+        assert_equal expected, actual        
+    end
+    def test_brief_output
+        logger = LoggerBase.new(1)
+        comment = 'Comment'
+        pass_phrase = MockPassPhrase.new(2, 4, 'passphrase')
+        expected = "Comment: Dictionary=2.0 BruteForce=4.0 Phrase='passphrase'"
+        
+        actual = logger.brief(pass_phrase, comment)
+        
+        assert_equal expected, actual        
+    end
+    def test_full_output
+        logger = LoggerBase.new(1)
+        comment = 'Comment'
+        pass_phrase = MockPassPhrase.new(2, 4, 'passphrase')
+        expected =<<END
+Stage: Comment
+Phrase: passphrase
+Dictionary attack:  2.0 bits (longevity: 4.0 seconds)
+Brute force attack: 4.0 bits (longevity: 16.0 seconds)
+END
+        
+        actual = logger.full(pass_phrase, comment)
+        
+        assert_equal expected, actual        
+    end
+end
+
 class IntegrationTests < Test::Unit::TestCase
     def test_default_behaviour
         expected = /^([a-zA-Z]+ ){4}$/

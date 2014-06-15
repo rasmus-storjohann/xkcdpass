@@ -6,7 +6,6 @@ require 'securerandom'
 # Plan: 
 # Add option for prepadding (string) and postpadding (string) which add zero entropy but non-zero haystack complexity
 # Add option for adding misspellings, remove or duplicate single letters
-# http://www.reddit.com/r/YouShouldKnow/comments/232uch/ysk_how_to_properly_choose_a_secure_password_the/cgte7lp
 
 ONE_BILLION = 1000000000
 ONE_MILLION_YEARS = 1000 * 1000 * 365 * 24 * 60 * 60
@@ -273,7 +272,7 @@ class LoggerBase
         log << "Dictionary attack:  #{dictionary_complexity(pass_phrase)} bits (longevity: #{dictionary_longevity(pass_phrase)})"
         log << "Brute force attack: #{brute_force_complexity(pass_phrase)} bits (longevity: #{brute_force_longevity(pass_phrase)})"
         log << ''
-        puts log.join("\n")
+        log.join("\n")
     end
     def dictionary_complexity(pass_phrase)
        pass_phrase.dictionary_complexity.round(1)
@@ -286,9 +285,6 @@ class LoggerBase
     end
     def brute_force_longevity(pass_phrase)
        PassphraseLongevity.new(pass_phrase.brute_force_complexity, @attacks_per_second).to_s
-    end
-    def phrase(pass_phrase)
-        @pass_phrase.to_s
     end
 end
 
